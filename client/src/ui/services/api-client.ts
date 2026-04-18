@@ -46,6 +46,10 @@ function postJSON<T>(path: string, body?: unknown): Promise<T> {
   });
 }
 
+function deleteJSON<T>(path: string): Promise<T> {
+  return requestJSON(path, { method: "DELETE" });
+}
+
 function patchJSON<T>(path: string, body?: unknown): Promise<T> {
   return requestJSON(path, {
     method: "PATCH",
@@ -72,6 +76,43 @@ export interface GeneratedWorldSummary {
 export interface GeneratedWorldListResponse {
   currentWorldId: string | null;
   worlds: GeneratedWorldSummary[];
+}
+
+export type CreateJobSizeK = 1 | 2 | 4;
+
+export type CreateJobPhase = 1 | 2 | 3 | 4;
+
+export type CreateJobEvent =
+  | { kind: "job_started"; at: number; jobId: string; prompt: string; sizeK: CreateJobSizeK }
+  | { kind: "phase"; at: number; phase: CreateJobPhase; label: string }
+  | { kind: "step"; at: number; phase: CreateJobPhase; step: string; label: string }
+  | { kind: "info"; at: number; label: string }
+  | { kind: "world_id"; at: number; worldId: string }
+  | { kind: "log"; at: number; stream: "stdout" | "stderr"; line: string }
+  | { kind: "job_done"; at: number; worldId: string; worldName?: string }
+  | { kind: "job_error"; at: number; message: string; tail: string[] };
+
+export interface CreateJobSnapshot {
+  jobId: string;
+  status: "running" | "done" | "error";
+  prompt: string;
+  sizeK: CreateJobSizeK;
+  phase: CreateJobPhase | null;
+  step: string | null;
+  startedAt: number;
+  finishedAt: number | null;
+  worldId: string | null;
+  worldName: string | null;
+  error: string | null;
+}
+
+export class JobConflictError extends Error {
+  activeJobId: string;
+  constructor(message: string, activeJobId: string) {
+    super(message);
+    this.name = "JobConflictError";
+    this.activeJobId = activeJobId;
+  }
 }
 
 export const apiClient = {
@@ -239,5 +280,69 @@ export const apiClient = {
     patch: { mainAreaPointId?: string | null },
   ): Promise<{ ok: boolean; state: Record<string, unknown> }> {
     return patchJSON(`/characters/${id}/runtime-state`, patch);
+  },
+
+  async createWorld(params: {
+    prompt: string;
+    sizeK: CreateJobSizeK;
+  }): Promise<{ ok: boolean; jobId: string }> {
+    const res = await fetch(`${API_BASE}/worlds/create`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(params),
+    });
+    if (res.status === 409) {
+      const body = await res.json().catch(() => ({} as Record<string, unknown>));
+      throw new JobConflictError(
+        typeof body.error === "string" ? body.error : "Generation already running",
+        typeof body.activeJobId === "string" ? body.activeJobId : "",
+      );
+    }
+    if (!res.ok) {
+      let detail = "";
+      try {
+        const body = await res.json();
+        detail = body.error ? `: ${body.error}` : "";
+      } catch {
+        // Ignore.
+      }
+      throw new Error(`API ${res.status}${detail}`);
+    }
+    return res.json();
+  },
+
+  getCurrentJob(): Promise<{ jobId: string | null; snapshot?: CreateJobSnapshot }> {
+    return fetchJSON("/worlds/jobs/current");
+  },
+
+  getJobStatus(jobId: string): Promise<CreateJobSnapshot> {
+    return fetchJSON(`/worlds/jobs/${encodeURIComponent(jobId)}`);
+  },
+
+  subscribeJobEvents(
+    jobId: string,
+    onEvent: (event: CreateJobEvent) => void,
+    onError?: (event: Event) => void,
+  ): () => void {
+    const url = `${API_BASE}/worlds/jobs/${encodeURIComponent(jobId)}/events`;
+    const source = new EventSource(url);
+    source.onmessage = (msg) => {
+      try {
+        const parsed = JSON.parse(msg.data) as CreateJobEvent;
+        onEvent(parsed);
+      } catch (err) {
+        console.warn("[api-client] Failed to parse job event:", err);
+      }
+    };
+    if (onError) {
+      source.onerror = onError;
+    }
+    return () => {
+      source.close();
+    };
+  },
+
+  deleteWorld(worldId: string): Promise<{ ok: boolean; deletedWorldId: string }> {
+    return deleteJSON(`/world/worlds/${encodeURIComponent(worldId)}`);
   },
 };

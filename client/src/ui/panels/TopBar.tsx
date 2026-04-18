@@ -8,13 +8,6 @@ import type { WorldInfo, GeneratedWorldSummary } from "../services/api-client";
 import { GodPanel } from "./GodPanel";
 import { SandboxChatPanel } from "./SandboxChatPanel";
 
-const SPEED_OPTIONS = [
-  { label: "Instant", value: 0 },
-  { label: "30s per tick", value: 30000 },
-  { label: "1m per tick", value: 60000 },
-  { label: "5m per tick", value: 300000 },
-];
-
 export function TopBar({
   worldInfo,
   gameTime,
@@ -28,11 +21,9 @@ export function TopBar({
   onToggleMainAreaPointsOverlay,
   onToggleInteractiveObjectsOverlay,
   onToggleAutoPlay,
-  onChangeTickInterval,
   onResetWorld,
   simStatus,
   autoPlayEnabled,
-  tickIntervalMs,
   isResetting,
   onHeightChange,
 }: {
@@ -48,11 +39,9 @@ export function TopBar({
   onToggleMainAreaPointsOverlay: () => void;
   onToggleInteractiveObjectsOverlay: () => void;
   onToggleAutoPlay: () => void;
-  onChangeTickInterval: (intervalMs: number) => void;
   onResetWorld: () => void;
   simStatus: "idle" | "running" | "paused" | "error";
   autoPlayEnabled: boolean;
-  tickIntervalMs: number;
   isResetting: boolean;
   onHeightChange?: (height: number) => void;
 }) {
@@ -63,7 +52,11 @@ export function TopBar({
   const [godPanelOpen, setGodPanelOpen] = useState(false);
   const [sandboxChatOpen, setSandboxChatOpen] = useState(false);
   const [showPauseToast, setShowPauseToast] = useState(false);
+  const [deletePopoverOpen, setDeletePopoverOpen] = useState(false);
+  const [deletingWorldId, setDeletingWorldId] = useState<string | null>(null);
   const barRef = useRef<HTMLDivElement | null>(null);
+  const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
+  const deletePopoverRef = useRef<HTMLDivElement | null>(null);
   const isRunning = simStatus === "running";
   const isBusy = isRunning || isResetting || isSwitchingWorld;
   const autoPlayToggleDisabled = isResetting || isSwitchingWorld || (isRunning && !autoPlayEnabled);
@@ -143,10 +136,63 @@ export function TopBar({
           ? "#95a5a6"
           : "#00b894";
 
-  const worldName = worldInfo?.worldName || "WorldSeed";
+  const pauseWorldIfNeeded = () => {
+    if (!autoPlayEnabled) return;
+    onToggleAutoPlay();
+    setShowPauseToast(true);
+    setTimeout(() => setShowPauseToast(false), 3500);
+  };
+
+  const worldName = worldInfo?.worldName || "WorldSpark";
   const timeLabel = gameTime.timeString
     ? `Day ${gameTime.day} · ${gameTime.timeString}${gameTime.period ? ` · ${gameTime.period}` : ""}`
     : `Day ${gameTime.day}`;
+
+  useEffect(() => {
+    if (!deletePopoverOpen) return;
+    const onDocClick = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (!target) return;
+      if (deleteButtonRef.current?.contains(target)) return;
+      if (deletePopoverRef.current?.contains(target)) return;
+      setDeletePopoverOpen(false);
+    };
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDeletePopoverOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onEsc);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onEsc);
+    };
+  }, [deletePopoverOpen]);
+
+  const handleDeleteWorld = async (worldToDelete: GeneratedWorldSummary) => {
+    if (worldToDelete.id === selectedWorldId) {
+      window.alert(
+        "Switch to a different world before deleting this one — the active world cannot be removed.",
+      );
+      return;
+    }
+    const confirmed = window.confirm(
+      `Permanently delete world "${worldToDelete.worldName}" (${worldToDelete.id})? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setDeletingWorldId(worldToDelete.id);
+    try {
+      await apiClient.deleteWorld(worldToDelete.id);
+      setAvailableWorlds((prev) => prev.filter((w) => w.id !== worldToDelete.id));
+    } catch (error) {
+      console.warn("[TopBar] Failed to delete world:", error);
+      window.alert(
+        `Delete failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      setDeletingWorldId(null);
+    }
+  };
 
   const handleWorldChange = async (event: ChangeEvent<HTMLSelectElement>) => {
     const nextWorldId = event.target.value;
@@ -219,9 +265,9 @@ export function TopBar({
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", position: "relative" }}>
           {availableWorlds.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <span style={{ fontSize: 11, opacity: 0.72, whiteSpace: "nowrap" }}>Scene</span>
               <select
                 value={selectedWorldId}
@@ -236,8 +282,30 @@ export function TopBar({
                   </option>
                 ))}
               </select>
+              <button
+                ref={deleteButtonRef}
+                onClick={() => setDeletePopoverOpen((prev) => !prev)}
+                disabled={isBusy || availableWorlds.length === 0}
+                style={iconBtnStyle(deletePopoverOpen)}
+                title="Manage worlds"
+                aria-label="Manage worlds"
+              >
+                🗑
+              </button>
             </div>
           )}
+
+          <button
+            onClick={() => {
+              pauseWorldIfNeeded();
+              navigate("/create");
+            }}
+            disabled={isResetting || isSwitchingWorld}
+            style={newWorldBtnStyle(isResetting || isSwitchingWorld)}
+            title="Create a brand-new world"
+          >
+            ✦ New World
+          </button>
 
           <button
             onClick={onToggleAutoPlay}
@@ -253,18 +321,50 @@ export function TopBar({
             {autoPlayEnabled ? "Pause" : "Play"}
           </button>
 
-          <select
-            value={tickIntervalMs}
-            onChange={(e) => onChangeTickInterval(Number(e.target.value))}
-            disabled={isBusy}
-            style={selectStyle}
-          >
-            {SPEED_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          {deletePopoverOpen && (
+            <div ref={deletePopoverRef} style={popoverStyle}>
+              <div style={popoverHeaderStyle}>
+                <span style={{ fontWeight: 600 }}>Manage worlds</span>
+                <button
+                  onClick={() => setDeletePopoverOpen(false)}
+                  style={popoverCloseBtnStyle}
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
+              </div>
+              <div style={popoverBodyStyle}>
+                {availableWorlds.length === 0 ? (
+                  <div style={{ opacity: 0.7, fontSize: 12 }}>No generated worlds.</div>
+                ) : (
+                  availableWorlds.map((world) => {
+                    const isActive = world.id === selectedWorldId;
+                    const isDeleting = deletingWorldId === world.id;
+                    return (
+                      <div key={world.id} style={popoverRowStyle}>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={popoverWorldNameStyle}>{world.worldName}</div>
+                          <div style={popoverWorldIdStyle}>{world.id}</div>
+                        </div>
+                        {isActive ? (
+                          <span style={popoverActiveBadgeStyle}>active</span>
+                        ) : (
+                          <button
+                            onClick={() => handleDeleteWorld(world)}
+                            disabled={isDeleting}
+                            style={popoverDeleteBtnStyle(isDeleting)}
+                            title={`Delete "${world.worldName}"`}
+                          >
+                            {isDeleting ? "Deleting…" : "Delete"}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -286,11 +386,7 @@ export function TopBar({
         <button
           onClick={() => {
             setSandboxChatOpen(true);
-            if (autoPlayEnabled) {
-              onToggleAutoPlay();
-              setShowPauseToast(true);
-              setTimeout(() => setShowPauseToast(false), 3500);
-            }
+            pauseWorldIfNeeded();
           }}
           style={chipBtnStyle(sandboxChatOpen)}
           title="把某个角色叫出来单独聊（不进入记忆、不影响世界）"
@@ -436,5 +532,133 @@ function chipBtnStyle(active: boolean): CSSProperties {
     cursor: "pointer",
     fontSize: 12,
     transition: "all 0.2s",
+  };
+}
+
+function iconBtnStyle(active: boolean): CSSProperties {
+  return {
+    background: active ? "rgba(231,76,60,0.18)" : "rgba(255,255,255,0.06)",
+    border: `1px solid ${active ? "rgba(231,76,60,0.5)" : "rgba(255,255,255,0.15)"}`,
+    color: active ? "#ffd2cf" : "#e0e0e0",
+    borderRadius: 999,
+    width: 28,
+    height: 28,
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    fontSize: 13,
+    transition: "all 0.2s",
+  };
+}
+
+function newWorldBtnStyle(disabled: boolean): CSSProperties {
+  return {
+    background: disabled
+      ? "rgba(255,255,255,0.08)"
+      : "linear-gradient(120deg, rgba(116,185,255,0.32), rgba(165,91,255,0.32))",
+    border: "1px solid rgba(168,193,255,0.55)",
+    color: "#f6f9ff",
+    borderRadius: 999,
+    padding: "6px 14px",
+    cursor: disabled ? "wait" : "pointer",
+    fontSize: 12,
+    fontWeight: 600,
+    letterSpacing: "0.02em",
+    boxShadow: disabled ? "none" : "0 6px 18px rgba(116,185,255,0.18)",
+    transition: "all 0.2s",
+    opacity: disabled ? 0.7 : 1,
+  };
+}
+
+const popoverStyle: CSSProperties = {
+  position: "absolute",
+  top: "calc(100% + 8px)",
+  right: 0,
+  width: 320,
+  maxHeight: 360,
+  background: "rgba(14, 18, 36, 0.98)",
+  border: "1px solid rgba(255,255,255,0.12)",
+  borderRadius: 12,
+  boxShadow: "0 18px 48px rgba(0,0,0,0.55)",
+  display: "flex",
+  flexDirection: "column",
+  zIndex: 200,
+  overflow: "hidden",
+};
+
+const popoverHeaderStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "10px 14px",
+  borderBottom: "1px solid rgba(255,255,255,0.08)",
+  fontSize: 12,
+  color: "#dde4ff",
+};
+
+const popoverCloseBtnStyle: CSSProperties = {
+  background: "transparent",
+  border: "none",
+  color: "#a8b3d4",
+  fontSize: 14,
+  cursor: "pointer",
+  padding: 0,
+  lineHeight: 1,
+};
+
+const popoverBodyStyle: CSSProperties = {
+  padding: "8px 8px 10px",
+  overflowY: "auto",
+  display: "flex",
+  flexDirection: "column",
+  gap: 6,
+};
+
+const popoverRowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  padding: "8px 10px",
+  borderRadius: 8,
+  background: "rgba(255,255,255,0.04)",
+};
+
+const popoverWorldNameStyle: CSSProperties = {
+  fontSize: 13,
+  fontWeight: 600,
+  color: "#e8ecff",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const popoverWorldIdStyle: CSSProperties = {
+  fontSize: 11,
+  color: "#7c87ad",
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+};
+
+const popoverActiveBadgeStyle: CSSProperties = {
+  fontSize: 11,
+  color: "#a3f7bf",
+  background: "rgba(76,209,148,0.14)",
+  border: "1px solid rgba(76,209,148,0.4)",
+  borderRadius: 999,
+  padding: "3px 10px",
+};
+
+function popoverDeleteBtnStyle(busy: boolean): CSSProperties {
+  return {
+    background: "rgba(231,76,60,0.14)",
+    border: "1px solid rgba(231,76,60,0.45)",
+    color: "#ffd2cf",
+    borderRadius: 999,
+    padding: "4px 12px",
+    fontSize: 11,
+    cursor: busy ? "wait" : "pointer",
+    opacity: busy ? 0.7 : 1,
   };
 }

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const GENERATED_WORLDS_DIR = path.resolve(__dirname, "../../../output/worlds");
+export const GENERATED_WORLDS_DIR = path.resolve(__dirname, "../../../output/worlds");
 
 export interface GeneratedWorldSummary {
   id: string;
@@ -32,10 +32,13 @@ export function listGeneratedWorlds(): GeneratedWorldSummary[] {
       const dir = path.join(GENERATED_WORLDS_DIR, entry.name);
       return {
         id: entry.name,
-        worldName: readWorldName(dir) ?? entry.name,
+        worldName: readWorldName(dir),
         dir,
       };
     })
+    .filter((entry): entry is GeneratedWorldSummary & { worldName: string } =>
+      entry.worldName !== null && hasWorldConfig(entry.dir),
+    )
     .sort((a, b) => b.id.localeCompare(a.id));
 }
 
@@ -59,6 +62,13 @@ function readWorldName(worldDir: string): string | null {
   }
 
   return null;
+}
+
+function hasWorldConfig(worldDir: string): boolean {
+  return (
+    fs.existsSync(path.join(worldDir, "world.json")) ||
+    fs.existsSync(path.join(worldDir, "config", "world.json"))
+  );
 }
 
 function isDirectory(targetPath: string): boolean {

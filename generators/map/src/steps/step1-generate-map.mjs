@@ -4,57 +4,11 @@ import { arkChat } from "../models/ark-client.mjs";
 import { loadPrompt } from "../utils/prompt-loader.mjs";
 import { resizeImage } from "../utils/image-utils.mjs";
 import { getMapImageSizeLabel } from "../utils/generation-config.mjs";
-
-function formatWorldActionSummary(worldDesign) {
-  const worldActions = worldDesign?.worldActions || [];
-  if (worldActions.length === 0) {
-    return "必须补充至少一个有世界语义的全局功能；不要只用发呆或移动来代替。";
-  }
-
-  return worldActions
-    .map((action, index) =>
-      `${index + 1}. ${action.name}(${action.id})：${action.description || "全场景可执行动作"}`,
-    )
-    .join("\n");
-}
-
-function formatRegionSummary(worldDesign) {
-  const regions = worldDesign?.regions || [];
-  if (regions.length === 0) {
-    return "本地图不要求单独的功能区标注，重点表现整个场景的统一功能与风貌。";
-  }
-
-  return regions
-    .map((region, index) => {
-      const interactions = (region.interactions || [])
-        .map((interaction) => `${interaction.name}(${interaction.id})`)
-        .join("、");
-      const modeLabel =
-        region.type === "building"
-          ? region.enterable
-            ? "可进入建筑"
-            : "景观建筑"
-          : "户外区域";
-      return [
-        `${index + 1}. ${region.name}(${region.id})`,
-        `   - 类型：${modeLabel}`,
-        `   - 位置提示：${region.placementHint || "未指定"}`,
-        `   - 外观提示：${region.visualDescription || region.description || "未指定"}`,
-        `   - 主要功能：${interactions || "无"}`,
-      ].join("\n");
-    })
-    .join("\n");
-}
-
-function formatMapPlanSummary(worldDesign) {
-  const mapPlan = worldDesign?.mapPlan || {};
-  return [
-    `- buildingMode: ${mapPlan.buildingMode || "mostly_enterable"}`,
-    `- compositionNotes: ${mapPlan.compositionNotes || "无"}`,
-    `- worldFunctionSummary: ${mapPlan.worldFunctionSummary || "无"}`,
-    `- regionDesignNotes: ${mapPlan.regionDesignNotes || "无"}`,
-  ].join("\n");
-}
+import {
+  formatMapPlanSummary,
+  formatRegionSummary,
+  formatWorldActionSummary,
+} from "../utils/world-design-summary.mjs";
 
 /**
  * Generate the source map with self-feedback loop.

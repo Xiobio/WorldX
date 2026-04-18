@@ -1,6 +1,6 @@
 ---
 name: worldseed-runtime-debugging
-description: Runs and debugs the live WorldSeed stack: dev startup, asset serving, Vite proxying, simulation playback, server config loading, and LLM auth failures. Use when `npm run dev` fails, Play does nothing, assets 404, Phaser parses HTML as JSON, or ticks advance without character behavior.
+description: Runs and debugs the live WorldSeed stack: dev startup, asset serving, Vite proxying, simulation playback, server config loading, anchor enforcement, debug overlays, and LLM auth failures. Use when `npm run dev` fails, Play does nothing, assets 404, Phaser parses HTML as JSON, anchored characters misbehave, or ticks advance without character behavior.
 ---
 # WorldSeed Runtime Debugging
 
@@ -76,6 +76,7 @@ If the button changes state but ticks do not advance, inspect the playback contr
 
 Note:
 - Current UI exposes `Play` / `Pause`, not a top-bar `Step` button
+- Pause can be clicked mid-tick; simulation stops after the current tick completes
 - For single-tick debugging, use the simulation API directly rather than assuming a dedicated UI control exists
 
 ### Ticks advance but characters do nothing
@@ -98,6 +99,21 @@ Relevant files:
 - `server/src/simulation/decision-maker.ts`
 - `server/src/simulation/simulation-engine.ts`
 
+### Anchored character moves to wrong area
+
+If an anchored character appears outside their anchor zone or is executing `move_to`:
+
+Check:
+- `server/src/simulation/action-menu-builder.ts` (should omit move actions)
+- `server/src/simulation/action-executor.ts` (defensive guard)
+- `server/src/core/character-manager.ts` (initial position resolution)
+- `server/src/utils/config-loader.ts` (`normalizeAnchor`)
+
+If an element-anchored character spawns **inside** the element:
+- Check `orchestrator/src/config-generator.mjs` (`findNearestWalkableTileOutsideBox`)
+- Check `orchestrator/src/main-area-points.mjs` (`snapToWalkableOutsideBox`)
+- The start position must be outside the element's bounding box
+
 ### Time resets after restart
 
 Check:
@@ -108,6 +124,34 @@ Check:
 Current expectation:
 - day/tick should persist through `world_global_state`
 - scene display time is derived from persisted day/tick plus scene config
+
+### Character sprites have green fringe
+
+If characters show green edges after generation:
+- Check `generators/character/src/utils/chromakey.mjs`
+- The `removeGreenBackground` function applies color decontamination for soft-edge pixels
+- The formula `fg = (pixel - bg*(1-t)) / t` removes green spill
+- Safety threshold `t >= 0.15` prevents noise amplification
+- Do not lower this threshold without verifying internal green sprite parts are preserved
+
+### Map generation model timeouts
+
+If the pipeline crashes during generation due to model API timeouts:
+- All model calls in map generation use `withRetry` (max 2 consecutive attempts)
+- Check `generators/map/src/utils/gemini-flash-img.mjs` and `generators/map/src/utils/gemini-pro.mjs`
+- Timeouts that occur only once are retried automatically; only two consecutive failures abort
+
+## Debug overlays
+
+Available only when accessing the client with `?dev=1`:
+- **Walkable area overlay**: blue translucent layer showing walkable tiles
+- **Functional region overlay**: bounding boxes with labels
+- **Main-area points overlay**: navigation point ids and positions
+- **Interactive objects overlay**: element bounding boxes and names
+
+Key files:
+- `client/src/scenes/WorldScene.ts`
+- `client/src/ui/App.tsx`
 
 ## Minimal health checks
 
@@ -145,4 +189,7 @@ If the TMJ request returns HTML or a redirect, debug proxy/path alignment before
 - Runtime is single-background-layer oriented
 - `ysort` is not part of the current runtime path
 - Regions come from the `regions` object layer
+- Interactive elements come from the `interactive_objects` object layer
 - Generated character configs are normalized by `server/src/utils/config-loader.ts`
+- Client displays scene time (formatted), not raw tick counters
+- All major visual sizes (character, bubble, dialogue distance) are relative to map dimensions, not absolute pixels

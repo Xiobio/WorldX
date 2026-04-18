@@ -10,9 +10,10 @@ import { DialoguePanel } from "./panels/DialoguePanel";
 import { SceneTransition } from "./panels/SceneTransition";
 import { RelationshipGraph } from "./pages/RelationshipGraph";
 import { Timeline } from "./pages/Timeline";
+import { CreateWorldPage } from "./pages/CreateWorldPage";
 import type { SimulationEvent, DialogueEventData, WorldTimeInfo } from "../types/api";
 import { apiClient } from "./services/api-client";
-import type { WorldInfo } from "./services/api-client";
+import type { GeneratedWorldSummary, WorldInfo } from "./services/api-client";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,6 +54,8 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   const location = useLocation();
   const navigate = useNavigate();
   const isDevMode = new URLSearchParams(location.search).get("dev") === "1";
+  const isCreateRoute = location.pathname === "/create";
+  const [worldsList, setWorldsList] = useState<GeneratedWorldSummary[] | null>(null);
   const [gameTime, setGameTime] = useState<WorldTimeInfo>({
     day: 1,
     tick: 0,
@@ -65,7 +68,6 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   const [events, setEvents] = useState<SimulationEvent[]>([]);
   const [simStatus, setSimStatus] = useState<"idle" | "running" | "paused" | "error">("idle");
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
-  const [tickIntervalMs, setTickIntervalMs] = useState(0);
   const [isResetting, setIsResetting] = useState(false);
   const [dialogueEvents, setDialogueEvents] = useState<SimulationEvent[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
@@ -78,6 +80,7 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   const [showInteractiveObjectsOverlay, setShowInteractiveObjectsOverlay] = useState(false);
   const isOverlayRoute =
     location.pathname === "/graph" || location.pathname === "/timeline";
+  const hideMainChrome = isOverlayRoute || isCreateRoute;
   const ticksPerScene = worldInfo?.sceneRuntime.cycleTicks ?? 48;
   const showDayTransition = worldInfo?.sceneRuntime.transitionEnabled ?? false;
   const transitionTitle =
@@ -85,7 +88,7 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
     (worldInfo?.sceneConfig.sceneType === "open" ? "夜色缓缓换了一幕" : "新的一天开始了");
 
   useEffect(() => {
-    const topOffset = isOverlayRoute ? 0 : Math.max(topBarHeight, DEFAULT_TOP_BAR_HEIGHT);
+    const topOffset = hideMainChrome ? 0 : Math.max(topBarHeight, DEFAULT_TOP_BAR_HEIGHT);
     document.documentElement.style.setProperty("--top-ui-offset", `${topOffset}px`);
 
     const rafId = window.requestAnimationFrame(() => {
@@ -93,7 +96,47 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
     });
 
     return () => window.cancelAnimationFrame(rafId);
-  }, [isOverlayRoute, topBarHeight]);
+  }, [hideMainChrome, topBarHeight]);
+
+  // Hide Phaser canvas / labels on routes that fully take over the screen
+  // (e.g. the create-world page). Phaser keeps running but is visually muted.
+  useEffect(() => {
+    const gameRoot = document.getElementById("game-root");
+    const labelRoot = document.getElementById("label-root");
+    const display = isCreateRoute ? "none" : "";
+    if (gameRoot) gameRoot.style.display = display;
+    if (labelRoot) labelRoot.style.display = display;
+    return () => {
+      if (gameRoot) gameRoot.style.display = "";
+      if (labelRoot) labelRoot.style.display = "";
+    };
+  }, [isCreateRoute]);
+
+  // Load the list of generated worlds once so we can auto-redirect to /create
+  // when the install is empty.
+  useEffect(() => {
+    let cancelled = false;
+    apiClient.getGeneratedWorlds()
+      .then((response) => {
+        if (cancelled) return;
+        setWorldsList(response.worlds);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.warn("[App] Failed to load generated worlds list:", error);
+        setWorldsList([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (worldsList === null) return;
+    if (worldsList.length === 0 && !isCreateRoute) {
+      navigate("/create", { replace: true });
+    }
+  }, [worldsList, isCreateRoute, navigate]);
 
   useEffect(() => {
     if (isDevMode) return;
@@ -174,9 +217,8 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
       }
       setDialogueEvents((prev) => [...prev, event]);
     };
-    const onPlaybackState = (payload: { autoPlay?: boolean; tickIntervalMs?: number }) => {
+    const onPlaybackState = (payload: { autoPlay?: boolean }) => {
       if (payload.autoPlay != null) setAutoPlayEnabled(payload.autoPlay);
-      if (payload.tickIntervalMs != null) setTickIntervalMs(payload.tickIntervalMs);
     };
 
     eventBus.on("time_update", onTimeUpdate);
@@ -200,10 +242,6 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   const handleToggleAutoPlay = useCallback(() => {
     eventBus.emit("set_auto_play", !autoPlayEnabled);
   }, [autoPlayEnabled, eventBus]);
-
-  const handleChangeTickInterval = useCallback((intervalMs: number) => {
-    eventBus.emit("set_tick_interval", intervalMs);
-  }, [eventBus]);
 
   const handleResetWorld = useCallback(async () => {
     const confirmed = window.confirm(
@@ -253,9 +291,17 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
     </OverlayErrorBoundary>
   ) : null;
 
+  if (isCreateRoute) {
+    return (
+      <div style={{ width: "100%", height: "100%", pointerEvents: "auto" }}>
+        <CreateWorldPage hasExistingWorlds={(worldsList?.length ?? 0) > 0} />
+      </div>
+    );
+  }
+
   return (
     <div style={{ width: "100%", height: "100%", pointerEvents: "none" }}>
-      {!isOverlayRoute && (
+      {!hideMainChrome && (
         <>
           <TopBar
             worldInfo={worldInfo}
@@ -270,11 +316,9 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
             onToggleMainAreaPointsOverlay={() => setShowMainAreaPointsOverlay((prev) => !prev)}
             onToggleInteractiveObjectsOverlay={() => setShowInteractiveObjectsOverlay((prev) => !prev)}
             onToggleAutoPlay={handleToggleAutoPlay}
-            onChangeTickInterval={handleChangeTickInterval}
             onResetWorld={handleResetWorld}
             simStatus={simStatus}
             autoPlayEnabled={autoPlayEnabled}
-            tickIntervalMs={tickIntervalMs}
             isResetting={isResetting}
             onHeightChange={setTopBarHeight}
           />

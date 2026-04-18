@@ -36,8 +36,12 @@ export class CharacterManager {
 
     this.relationshipManager = new RelationshipManager(this.profiles);
 
+    const occupiedPointIds = new Set<string>();
     for (const profile of profiles) {
-      const state = buildInitialCharacterState(profile, this.worldManager);
+      const state = buildInitialCharacterState(profile, this.worldManager, occupiedPointIds);
+      if (state.mainAreaPointId) {
+        occupiedPointIds.add(state.mainAreaPointId);
+      }
       charStateStore.initCharacterState(state);
 
       for (const initMem of profile.initialMemories) {
@@ -221,15 +225,20 @@ function rowToDiary(row: any): DiaryEntry {
 function buildInitialCharacterState(
   profile: CharacterProfile,
   worldManager: WorldManager,
+  occupiedPointIds: Set<string>,
 ): CharacterState {
   let mainAreaPointId: string | null = null;
   if (profile.startPosition === "main_area") {
     if (profile.anchor?.type === "element") {
       const elementPointId = `element_${profile.anchor.targetId}`;
       const point = worldManager.getMainAreaPoint(elementPointId);
-      mainAreaPointId = point ? elementPointId : worldManager.getInitialMainAreaPointId(profile.id);
+      // Anchored characters always spawn at their anchor point, even if it's
+      // in a small disconnected component of the point graph.
+      mainAreaPointId = point
+        ? elementPointId
+        : worldManager.getSpreadMainAreaPointId(profile.id, occupiedPointIds);
     } else {
-      mainAreaPointId = worldManager.getInitialMainAreaPointId(profile.id);
+      mainAreaPointId = worldManager.getSpreadMainAreaPointId(profile.id, occupiedPointIds);
     }
   }
 

@@ -446,7 +446,13 @@ function findStartPositions(collisionData, gridWidth, gridHeight, tileSize, regi
     }
   }
 
-  if (walkable.length === 0) {
+  const preferredWalkable = getLargestWalkableComponent(collisionData, gridWidth, gridHeight);
+  const spawnableWalkable =
+    preferredWalkable.size > 0
+      ? walkable.filter(({ x, y }) => preferredWalkable.has(`${x},${y}`))
+      : walkable;
+
+  if (spawnableWalkable.length === 0) {
     return Array.from({ length: count }, (_, i) => ({
       tileX: Math.floor(gridWidth / 2) + i,
       tileY: Math.floor(gridHeight / 2),
@@ -456,9 +462,9 @@ function findStartPositions(collisionData, gridWidth, gridHeight, tileSize, regi
     }));
   }
 
-  const step = Math.max(1, Math.floor(walkable.length / (count + 1)));
+  const step = Math.max(1, Math.floor(spawnableWalkable.length / (count + 1)));
   return Array.from({ length: count }, (_, i) => {
-    const pos = walkable[Math.min((i + 1) * step, walkable.length - 1)];
+    const pos = spawnableWalkable[Math.min((i + 1) * step, spawnableWalkable.length - 1)];
 
     let locationId = "main_area";
     if (regions.length > 0) {
@@ -490,6 +496,57 @@ function findStartPositions(collisionData, gridWidth, gridHeight, tileSize, regi
       locationId,
     };
   });
+}
+
+function getLargestWalkableComponent(collisionData, gridWidth, gridHeight) {
+  const walkable = new Set();
+  for (let y = 0; y < gridHeight; y++) {
+    for (let x = 0; x < gridWidth; x++) {
+      if (collisionData[y * gridWidth + x] === 0) {
+        walkable.add(`${x},${y}`);
+      }
+    }
+  }
+
+  if (walkable.size === 0) {
+    return new Set();
+  }
+
+  const visited = new Set();
+  let largest = new Set();
+
+  for (const key of walkable) {
+    if (visited.has(key)) continue;
+
+    const component = new Set();
+    const queue = [key];
+    visited.add(key);
+
+    while (queue.length > 0) {
+      const currentKey = queue.shift();
+      component.add(currentKey);
+      const [x, y] = currentKey.split(",").map(Number);
+      const neighbors = [
+        [x + 1, y],
+        [x - 1, y],
+        [x, y + 1],
+        [x, y - 1],
+      ];
+
+      for (const [nx, ny] of neighbors) {
+        const neighborKey = `${nx},${ny}`;
+        if (!walkable.has(neighborKey) || visited.has(neighborKey)) continue;
+        visited.add(neighborKey);
+        queue.push(neighborKey);
+      }
+    }
+
+    if (component.size > largest.size) {
+      largest = component;
+    }
+  }
+
+  return largest;
 }
 
 function resolveAnchoredStartPosition(anchor, tmjRegions, tmjObjects, collisionData, gridWidth, gridHeight, tileSize, mainAreaPoints) {

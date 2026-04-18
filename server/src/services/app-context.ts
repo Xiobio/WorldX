@@ -24,10 +24,21 @@ export class AppContext {
 
   private worldDirPath?: string;
 
+  private _initialized = false;
+
   async initialize(worldDirPath?: string): Promise<void> {
     this.worldDirPath = worldDirPath;
     initDatabase();
-    this.rebuildRuntime();
+    if (worldDirPath) {
+      this.rebuildRuntime();
+    } else {
+      this.buildMinimalRuntime();
+    }
+    this._initialized = true;
+  }
+
+  get hasWorld(): boolean {
+    return !!this.worldDirPath;
   }
 
   getWorldDir(): string | undefined {
@@ -66,6 +77,16 @@ export class AppContext {
       DELETE FROM llm_call_logs;
       DELETE FROM content_candidates;
     `);
+  }
+
+  private buildMinimalRuntime(): void {
+    if (!this.llmClient) {
+      this.llmClient = new LLMClient();
+    }
+    if (!this.promptBuilder) {
+      this.promptBuilder = new PromptBuilder();
+      this.promptBuilder.initialize();
+    }
   }
 
   private rebuildRuntime(): void {

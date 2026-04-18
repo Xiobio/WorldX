@@ -1,28 +1,37 @@
 import { editImage } from "../models/gemini-flash-img.mjs";
 import { geminiProVisionJSON } from "../models/gemini-pro.mjs";
 import { loadPrompt } from "../utils/prompt-loader.mjs";
+import {
+  formatMapPlanSummary,
+  formatRegionSummary,
+} from "../utils/world-design-summary.mjs";
 
 /**
  * Generate a walkable-area-marked version of the map using image editing mode.
  * Allows up to MAX_RETRIES modifications + 1 final review.
  * @param {Buffer} compressedMapBuffer - same-resolution optimized map used for model input
  * @param {string} userPrompt - user's map description for context
+ * @param {object} worldDesign
  * @param {(name: string, data: any) => void} save
  * @returns {{ buffer: Buffer, reviewPassed: boolean, attempts: number }}
  */
-export async function generateWalkableMap(compressedMapBuffer, userPrompt, save) {
+export async function generateWalkableMap(compressedMapBuffer, userPrompt, worldDesign, save) {
   const MAX_RETRIES = parseInt(process.env.STEP4_MAX_RETRIES || process.env.MAX_RETRIES || "3", 10);
   const GENERATE_TIMEOUT_MS = parseInt(process.env.STEP4_GENERATE_TIMEOUT_MS || "180000", 10);
   const REVIEW_TIMEOUT_MS = parseInt(process.env.STEP4_REVIEW_TIMEOUT_MS || "90000", 10);
   let additionalInstructions = "";
   let markedBuffer = null;
   const totalAttempts = MAX_RETRIES + 1;
+  const mapPlanSummary = formatMapPlanSummary(worldDesign);
+  const regionSummary = formatRegionSummary(worldDesign);
 
   for (let attempt = 1; attempt <= totalAttempts; attempt++) {
     console.log(`[Step 4] Generating walkable area map (attempt ${attempt}/${totalAttempts})...`);
 
     const prompt = loadPrompt("step4-walkable-generation.md", {
       additionalInstructions,
+      mapPlanSummary,
+      regionSummary,
       userPrompt,
     });
 
@@ -36,7 +45,11 @@ export async function generateWalkableMap(compressedMapBuffer, userPrompt, save)
 
     console.log(`[Step 4] Reviewing (${attempt}/${totalAttempts})...`);
 
-    const reviewPrompt = loadPrompt("step4-walkable-review.md", { userPrompt });
+    const reviewPrompt = loadPrompt("step4-walkable-review.md", {
+      mapPlanSummary,
+      regionSummary,
+      userPrompt,
+    });
 
     let review;
     let reviewError = null;

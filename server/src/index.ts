@@ -10,6 +10,7 @@ import { appContext } from "./services/app-context.js";
 import { setupWebSocket } from "./api/websocket.js";
 
 import worldRoutes from "./api/routes/world.js";
+import worldsCreateRoutes from "./api/routes/worlds-create.js";
 import characterRoutes from "./api/routes/characters.js";
 import eventsRoutes from "./api/routes/events.js";
 import graphRoutes from "./api/routes/graph.js";
@@ -62,29 +63,49 @@ async function main() {
   app.use(express.json());
 
   const worldDir = resolveInitialWorldDir();
-  console.log(`[WorldSeed] World dir: ${worldDir ?? "using default configs"}`);
+  if (worldDir) {
+    console.log(`[WorldSpark] World dir: ${worldDir}`);
+  } else {
+    console.log("[WorldSpark] No generated world found — server starting in empty mode. Navigate to /create to generate your first world.");
+  }
 
   await appContext.initialize(worldDir);
-  console.log("[WorldSeed] All systems initialized");
+  console.log("[WorldSpark] All systems initialized");
 
   app.get("/api/health", (_req, res) => {
+    if (!appContext.hasWorld) {
+      res.json({ status: "ok", project: "world-spark", worldName: null, sceneConfig: null });
+      return;
+    }
     const wm = appContext.worldManager;
     res.json({
       status: "ok",
-      project: "world-seed",
+      project: "world-spark",
       worldName: wm.getWorldName(),
       sceneConfig: wm.getSceneConfig(),
     });
   });
 
+  // World creation & management routes work even without an active world.
+  app.use("/api/worlds", worldsCreateRoutes);
+
+  // Guard: all other API routes require an active world to be loaded.
+  const requireWorld: express.RequestHandler = (_req, res, next) => {
+    if (!appContext.hasWorld) {
+      res.status(503).json({ error: "No world loaded. Create one first." });
+      return;
+    }
+    next();
+  };
+
   app.use("/api/world", worldRoutes);
-  app.use("/api/characters", characterRoutes);
-  app.use("/api/events", eventsRoutes);
-  app.use("/api/graph", graphRoutes);
-  app.use("/api/content", createPublicContentRouter());
-  app.use("/api/simulation", simulationRoutes);
-  app.use("/api/god", godRoutes);
-  app.use("/api/sandbox/chat", sandboxChatRoutes);
+  app.use("/api/characters", requireWorld, characterRoutes);
+  app.use("/api/events", requireWorld, eventsRoutes);
+  app.use("/api/graph", requireWorld, graphRoutes);
+  app.use("/api/content", requireWorld, createPublicContentRouter());
+  app.use("/api/simulation", requireWorld, simulationRoutes);
+  app.use("/api/god", requireWorld, godRoutes);
+  app.use("/api/sandbox/chat", requireWorld, sandboxChatRoutes);
 
   app.use("/assets/map", createWorldAssetHandler("map"));
   app.use("/assets/characters", createWorldAssetHandler("characters"));

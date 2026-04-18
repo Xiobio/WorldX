@@ -109,7 +109,7 @@ async function main() {
     const [regionResult, elementResult, step4] = await Promise.all([
       resolveDesignedRegions(compressedMap, worldDesign, userPrompt, save),
       locateElements(compressedMap, worldDesign, userPrompt, save),
-      generateWalkableMap(compressedMap, userPrompt, save),
+      generateWalkableMap(compressedMap, userPrompt, worldDesign, save),
     ]);
 
     save("03-designed-regions.json", regionResult.preparedRegions);

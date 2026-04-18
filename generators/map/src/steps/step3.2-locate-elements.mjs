@@ -217,9 +217,12 @@ export async function locateElements(compressedBuffer, worldDesign, userPrompt, 
   );
 
   const elementsList = locatedElements
-    .map((e) =>
-      `- ${e.id}: ${e.name} (${e.topLeft.x},${e.topLeft.y})→(${e.bottomRight.x},${e.bottomRight.y})`,
-    )
+    .map((e) => {
+      const lines = [`- ${e.id}: ${e.name} (${e.topLeft.x},${e.topLeft.y})→(${e.bottomRight.x},${e.bottomRight.y})`];
+      if (e.visualDescription) lines.push(`  外观：${e.visualDescription}`);
+      if (e.placementHint) lines.push(`  位置提示：${e.placementHint}`);
+      return lines.join("\n");
+    })
     .join("\n");
 
   const { width, height } = await getImageSize(compressedBuffer);

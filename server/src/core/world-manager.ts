@@ -33,6 +33,7 @@ export interface TickAdvanceResult {
 export class WorldManager {
   private locationConfigs: LocationConfig[] = [];
   private mainAreaPoints: MainAreaPointConfig[] = [];
+  private preferredMainAreaPointIds: Set<string> | null = null;
   private worldActions: WorldActionConfig[] = [];
   private worldSize: WorldSizeConfig | null = null;
   private sceneConfig!: SceneConfig;
@@ -52,6 +53,7 @@ export class WorldManager {
       config.worldDescription ?? "",
     );
     this.mainAreaPoints = normalizeMainAreaPoints(config.mainAreaPoints);
+    this.preferredMainAreaPointIds = getLargestMainAreaPointComponent(this.mainAreaPoints);
     this.worldSize = normalizeWorldSize(config.worldSize) ?? inferWorldSizeFromWorldDir();
     this.worldActions = config.worldActions ?? [];
     this.worldName = config.worldName ?? "unknown";
@@ -190,24 +192,40 @@ export class WorldManager {
 
   getInitialMainAreaPointId(seed: string): string | null {
     if (!this.hasMainAreaPointGraph()) return null;
-    const points = this.mainAreaPoints;
+    const points = this.getPreferredSpawnMainAreaPoints();
     const index = Math.abs(hashString(seed)) % points.length;
     return points[index]?.id ?? null;
   }
 
+  /**
+   * Pick a spawn point that avoids already-occupied points when possible.
+   * Falls back to the hash-based default if every point is taken.
+   */
+  getSpreadMainAreaPointId(seed: string, occupied: Set<string>): string | null {
+    if (!this.hasMainAreaPointGraph()) return null;
+    const points = this.getPreferredSpawnMainAreaPoints();
+    if (points.length === 0) return null;
+
+    const free = points.filter((p) => !occupied.has(p.id));
+    const pool = free.length > 0 ? free : points;
+    const index = Math.abs(hashString(seed)) % pool.length;
+    return pool[index]?.id ?? null;
+  }
+
   pickDistantMainAreaPointId(currentPointId: string | null | undefined, seed: string): string | null {
     if (!this.hasMainAreaPointGraph()) return null;
+    const points = this.getPreferredSpawnMainAreaPoints();
     const current = this.getMainAreaPoint(currentPointId);
-    if (!current) {
+    if (!current || !points.some((point) => point.id === current.id)) {
       return this.getInitialMainAreaPointId(seed);
     }
 
-    const farCandidates = this.mainAreaPoints.filter(
+    const farCandidates = points.filter(
       (point) => point.id !== current.id && !current.adjacentPointIds.includes(point.id),
     );
     const candidatePool = farCandidates.length > 0
       ? farCandidates
-      : this.mainAreaPoints.filter((point) => point.id !== current.id);
+      : points.filter((point) => point.id !== current.id);
     if (candidatePool.length === 0) return current.id;
 
     const ranked = [...candidatePool].sort((a, b) => {
@@ -218,6 +236,14 @@ export class WorldManager {
     const preferredPool = ranked.slice(0, Math.max(1, Math.ceil(ranked.length * 0.6)));
     const pickIndex = Math.abs(hashString(`${seed}:${current.id}`)) % preferredPool.length;
     return preferredPool[pickIndex]?.id ?? preferredPool[0]?.id ?? null;
+  }
+
+  isPreferredSpawnMainAreaPoint(pointId: string | null | undefined): boolean {
+    if (!pointId) return false;
+    if (!this.preferredMainAreaPointIds || this.preferredMainAreaPointIds.size === 0) {
+      return this.mainAreaPoints.some((point) => point.id === pointId);
+    }
+    return this.preferredMainAreaPointIds.has(pointId);
   }
 
   getWorldActions(): WorldActionConfig[] {
@@ -257,6 +283,14 @@ export class WorldManager {
     worldState.setGlobalState("current_day", String(day));
     worldState.setGlobalState("current_tick", String(tick));
     return { day, tick };
+  }
+
+  private getPreferredSpawnMainAreaPoints(): MainAreaPointConfig[] {
+    if (!this.preferredMainAreaPointIds || this.preferredMainAreaPointIds.size === 0) {
+      return this.mainAreaPoints;
+    }
+    const filtered = this.mainAreaPoints.filter((point) => this.preferredMainAreaPointIds?.has(point.id));
+    return filtered.length > 0 ? filtered : this.mainAreaPoints;
   }
 
   getWorldAction(actionId: string): WorldActionConfig | undefined {
@@ -551,6 +585,55 @@ function hashString(value: string): number {
 
 function distanceBetweenPoints(a: MainAreaPointConfig, b: MainAreaPointConfig): number {
   return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function getLargestMainAreaPointComponent(points: MainAreaPointConfig[]): Set<string> | null {
+  if (points.length === 0) return null;
+
+  const pointMap = new Map(points.map((point) => [point.id, point]));
+  const reverseAdjacency = new Map<string, string[]>();
+  for (const point of points) {
+    for (const neighborId of point.adjacentPointIds || []) {
+      if (!pointMap.has(neighborId)) continue;
+      const reverse = reverseAdjacency.get(neighborId) ?? [];
+      reverse.push(point.id);
+      reverseAdjacency.set(neighborId, reverse);
+    }
+  }
+
+  const visited = new Set<string>();
+  let largest: Set<string> | null = null;
+
+  for (const point of points) {
+    if (visited.has(point.id)) continue;
+
+    const component = new Set<string>();
+    const queue = [point.id];
+    visited.add(point.id);
+
+    while (queue.length > 0) {
+      const currentId = queue.shift()!;
+      component.add(currentId);
+      const current = pointMap.get(currentId);
+      if (!current) continue;
+
+      const neighbors = [
+        ...(current.adjacentPointIds || []).filter((neighborId) => pointMap.has(neighborId)),
+        ...(reverseAdjacency.get(currentId) || []),
+      ];
+      for (const neighborId of neighbors) {
+        if (visited.has(neighborId)) continue;
+        visited.add(neighborId);
+        queue.push(neighborId);
+      }
+    }
+
+    if (!largest || component.size > largest.size) {
+      largest = component;
+    }
+  }
+
+  return largest;
 }
 
 function clampRatio(value: number): number {

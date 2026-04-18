@@ -93,7 +93,7 @@ export async function removeGreenBackground(inputBuffer) {
     }
   }
 
-  // Phase 2: apply transparency based on flood-fill results
+  // Phase 2: apply transparency + color decontamination based on flood-fill results
   let removedCount = 0;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -104,10 +104,18 @@ export async function removeGreenBackground(inputBuffer) {
         removedCount++;
       } else if (s === 2) {
         const d = distAt(x, y);
-        const alpha = Math.round(
-          255 * ((d - HARD_THRESHOLD) / (SOFT_THRESHOLD - HARD_THRESHOLD)),
-        );
-        pixels[pi + 3] = Math.min(pixels[pi + 3], alpha);
+        const t = Math.max(0, Math.min(1, (d - HARD_THRESHOLD) / (SOFT_THRESHOLD - HARD_THRESHOLD)));
+        pixels[pi + 3] = Math.min(pixels[pi + 3], Math.round(255 * t));
+
+        // Remove background color spill from the foreground RGB.
+        // A mixed pixel = fg * t + bg * (1-t), so fg = (pixel - bg*(1-t)) / t.
+        // Only apply when t is large enough to avoid extreme amplification.
+        if (t >= 0.15 && t < 1) {
+          const bgMix = 1 - t;
+          pixels[pi]     = clampByte((pixels[pi]     - bgColor.r * bgMix) / t);
+          pixels[pi + 1] = clampByte((pixels[pi + 1] - bgColor.g * bgMix) / t);
+          pixels[pi + 2] = clampByte((pixels[pi + 2] - bgColor.b * bgMix) / t);
+        }
       }
     }
   }
@@ -165,4 +173,8 @@ function detectBackgroundColor(pixels, width, height, channels) {
 
 function colorDistance(r1, g1, b1, r2, g2, b2) {
   return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
+}
+
+function clampByte(v) {
+  return Math.min(255, Math.max(0, Math.round(v)));
 }
