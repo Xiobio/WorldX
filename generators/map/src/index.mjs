@@ -3,7 +3,6 @@ import { writeFileSync, mkdirSync, readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
-import { evaluateComplexity } from "./steps/step0-complexity.mjs";
 import { generateMap } from "./steps/step1-generate-map.mjs";
 import { compressMap } from "./steps/step2-compress.mjs";
 import { resolveDesignedRegions, scaleRegions } from "./steps/step3-resolve-designed-regions.mjs";
@@ -65,23 +64,6 @@ async function main() {
       });
 
   try {
-    // ── Step 0: Complexity Gating ──
-    console.log("\n═══ Step 0: Complexity Gating ═══");
-    const complexity = await evaluateComplexity(userPrompt);
-    metadata.steps.step0 = complexity;
-    save("00-complexity.json", complexity);
-
-    if (!complexity.feasible) {
-      console.error("\n✗ Map is too complex for current capabilities.");
-      console.error(`  Reason: ${complexity.reason}`);
-      if (complexity.suggestions?.length) {
-        console.error("  Suggestions:");
-        complexity.suggestions.forEach((s) => console.error(`    - ${s}`));
-      }
-      save("metadata.json", metadata);
-      process.exit(1);
-    }
-
     // ── Step 1: Generate Map ──
     console.log(`\n═══ Step 1: Generate ${MAP_IMAGE_SIZE} Map ═══`);
     const step1 = await generateMap(userPrompt, worldDesign, save);

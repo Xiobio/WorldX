@@ -1,7 +1,16 @@
 import dotenv from "dotenv";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
-import { mkdirSync, writeFileSync, existsSync, readdirSync, statSync, renameSync, rmSync } from "fs";
+import {
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  readdirSync,
+  statSync,
+  renameSync,
+  rmSync,
+} from "fs";
 import { spawn } from "child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -16,6 +25,7 @@ const CHARACTER_GENERATION_TIMEOUT_MS = parseInt(
   process.env.CHARACTER_GENERATION_TIMEOUT_MS || "300000",
   10,
 );
+const KEEP_GENERATION_ARTIFACTS = process.env.KEEP_GENERATION_ARTIFACTS === "1";
 
 async function main() {
   const userPrompt = process.argv.slice(2).join(" ");
@@ -34,7 +44,7 @@ async function main() {
   mkdirSync(logsDir, { recursive: true });
 
   console.log("\n╔══════════════════════════════════════════════╗");
-  console.log("║         WorldSeed: One Sentence, One World       ║");
+  console.log("║         WorldX: One Sentence, One World       ║");
   console.log("╚══════════════════════════════════════════════╝\n");
   console.log(`World ID: ${worldId}`);
   console.log(`Prompt:   ${userPrompt}\n`);
@@ -63,13 +73,22 @@ async function main() {
       charsDir,
       charScript,
       characters: worldDesign.characters,
+      worldDesign,
     }),
   ]);
   if (mapResult.status === "rejected") throw mapResult.reason;
   if (characterResult.status === "rejected") throw characterResult.reason;
 
+  purgeFailedCharacters(charsDir, worldDesign);
+
   console.log("\n━━━ Phase 4: Generating Simulation Configs ━━━");
   const { worldConfig, characterConfigs, sceneConfig } = generateConfigs(worldDesign, worldDir);
+
+  if (!KEEP_GENERATION_ARTIFACTS) {
+    cleanupIntermediateImages(worldDir);
+  } else {
+    console.log("\n[Artifacts] Dev mode detected; keeping intermediate images for debugging.");
+  }
 
   console.log("\n╔══════════════════════════════════════════════╗");
   console.log("║              World Generation Complete!           ║");
@@ -115,26 +134,93 @@ async function generateMapAssets({ mapDir, worldDir, logsDir, mapScript, mapDesc
   }
 }
 
-async function generateCharacterAssets({ charsDir, charScript, characters }) {
+async function generateCharacterAssets({ charsDir, charScript, characters, worldDesign }) {
   console.log("\n━━━ Phase 3: Generating Characters ━━━");
+  const worldVisualContext = buildWorldVisualContext(worldDesign);
 
   for (let i = 0; i < characters.length; i++) {
     const char = characters[i];
     console.log(`\nGenerating character ${i + 1}/${characters.length}: ${char.name}`);
 
     try {
-      await runNodeScript(charScript, [char.appearance, "--name", char.name], {
+      await runNodeScript(
+        charScript,
+        [
+          char.appearance,
+          "--name",
+          char.name,
+          "--role",
+          typeof char.role === "string" ? char.role : "",
+          "--world-visual-context",
+          worldVisualContext,
+        ],
+        {
         env: {
           CHAR_OUTPUT_DIR: charsDir,
         },
         timeoutMs: CHARACTER_GENERATION_TIMEOUT_MS,
         label: `Character "${char.name}" generation`,
-      });
+        },
+      );
     } catch (err) {
       console.error(`Character "${char.name}" generation failed: ${err.message}`);
       console.error("Continuing with remaining characters...");
     }
   }
+}
+
+function purgeFailedCharacters(charsDir, worldDesign) {
+  const charsJsonPath = join(charsDir, "characters.json");
+  if (!existsSync(charsJsonPath)) return;
+
+  const generatedChars = JSON.parse(
+    readFileSync(charsJsonPath, "utf-8"),
+  );
+
+  const validChars = generatedChars.filter((entry) => {
+    const spritePath = join(charsDir, entry.id, "spritesheet.png");
+    if (existsSync(spritePath)) return true;
+    console.warn(`[Cleanup] Removing failed character "${entry.name}" (${entry.id})`);
+    rmSync(join(charsDir, entry.id), { recursive: true, force: true });
+    return false;
+  });
+
+  // Also remove empty char directories that never made it into characters.json
+  for (const entry of readdirSync(charsDir)) {
+    if (!entry.startsWith("char_")) continue;
+    const dirPath = join(charsDir, entry);
+    if (!statSync(dirPath).isDirectory()) continue;
+    if (!existsSync(join(dirPath, "spritesheet.png"))) {
+      console.warn(`[Cleanup] Removing orphan directory: ${entry}`);
+      rmSync(dirPath, { recursive: true, force: true });
+    }
+  }
+
+  if (validChars.length < generatedChars.length) {
+    writeFileSync(charsJsonPath, JSON.stringify(validChars, null, 2));
+  }
+
+  // Keep worldDesign.characters in sync so index-based mapping in config-generator stays correct
+  const validNames = new Set(validChars.map((c) => c.name));
+  const before = worldDesign.characters.length;
+  worldDesign.characters = worldDesign.characters.filter((c) => validNames.has(c.name));
+  const removed = before - worldDesign.characters.length;
+  if (removed > 0) {
+    console.warn(`[Cleanup] Dropped ${removed} design character(s) with no valid sprite.`);
+  }
+
+  if (worldDesign.characters.length === 0) {
+    throw new Error("All character generations failed — no valid sprites found.");
+  }
+}
+
+function buildWorldVisualContext(worldDesign) {
+  const parts = [
+    typeof worldDesign?.mapDescription === "string" ? worldDesign.mapDescription.trim() : "",
+    typeof worldDesign?.worldDescription === "string" ? worldDesign.worldDescription.trim() : "",
+    typeof worldDesign?.worldName === "string" ? worldDesign.worldName.trim() : "",
+  ].filter(Boolean);
+  return parts.join("；");
 }
 
 function runNodeScript(scriptPath, args, { env = {}, timeoutMs = 0, label = "Process" } = {}) {
@@ -200,6 +286,44 @@ function flattenNestedOutputInto(parentDir) {
     rmSync(entryPath, { recursive: true, force: true });
     break;
   }
+}
+
+function cleanupIntermediateImages(worldDir) {
+  const mapDir = join(worldDir, "map");
+  const charsDir = join(worldDir, "characters");
+  let removedCount = 0;
+
+  if (existsSync(mapDir)) {
+    for (const entry of readdirSync(mapDir)) {
+      const entryPath = join(mapDir, entry);
+      if (!statSync(entryPath).isFile()) continue;
+      const isImage = /\.(png|jpg|jpeg|webp)$/i.test(entry);
+      const keepImage = entry === "06-background.png";
+      if (isImage && !keepImage) {
+        rmSync(entryPath, { force: true });
+        removedCount++;
+      }
+    }
+  }
+
+  if (existsSync(charsDir)) {
+    for (const entry of readdirSync(charsDir)) {
+      const charDir = join(charsDir, entry);
+      if (!statSync(charDir).isDirectory()) continue;
+      for (const charFile of readdirSync(charDir)) {
+        const charFilePath = join(charDir, charFile);
+        if (!statSync(charFilePath).isFile()) continue;
+        const isImage = /\.(png|jpg|jpeg|webp)$/i.test(charFile);
+        const keepImage = charFile === "spritesheet.png";
+        if (isImage && !keepImage) {
+          rmSync(charFilePath, { force: true });
+          removedCount++;
+        }
+      }
+    }
+  }
+
+  console.log(`\n[Artifacts] Removed ${removedCount} intermediate image${removedCount === 1 ? "" : "s"}. Logs were kept.`);
 }
 
 main().catch((err) => {

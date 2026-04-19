@@ -6,6 +6,9 @@
 ## 角色B：{{nameB}}（{{idB}}）
 - 对A的关系：熟悉度{{familiarityBA}}，好感{{affectionBA}}，信任{{trustBA}}，紧张度{{tensionBA}}
 
+## 世界背景
+{{worldSocialContext}}
+
 ## 场景
 - 地点：{{location}}
 - 时间：第{{day}}天 {{timeString}}
@@ -22,6 +25,7 @@
 4. 请使用角色ID作为 key。
 5. 如果对话中提到了**不在场的第三方**的事情（八卦、消息、评价），请在 `hearsayGenerated` 中为听到这些信息的一方生成传闻摘要，格式："从{{nameA}}那里听说，..."。如果没有第三方信息，可省略此字段。
 6. 只输出 JSON，不要附加解释。
+7. 世界背景只作为判断这段互动在这个世界里算不算自然、亲近、失礼、谨慎或重要的参考底色；不要机械复述背景设定。
 
 输出 JSON：
 ```json

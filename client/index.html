@@ -3,17 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>WorldSpark</title>
+    <title>WorldX</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       :root { --top-ui-offset: 52px; }
-      body { overflow: hidden; background: #1a1a2e; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+      body { overflow: hidden; background: #070819; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; }
+      #background-root {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+      }
       #game-root {
         position: absolute;
         top: var(--top-ui-offset);
         left: 0;
         width: 100%;
         height: calc(100% - var(--top-ui-offset));
+        z-index: 1;
       }
       #label-root {
         position: absolute;
@@ -23,8 +30,9 @@
         height: calc(100% - var(--top-ui-offset));
         overflow: hidden;
         pointer-events: none;
+        z-index: 2;
       }
-      #ui-root { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+      #ui-root { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
       .character-label {
         position: absolute;
         display: flex;
@@ -71,9 +79,23 @@
         line-height: 1;
         filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
       }
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.15);
+        border-radius: 3px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.25);
+      }
     </style>
   </head>
   <body>
+    <div id="background-root"></div>
     <div id="game-root"></div>
     <div id="label-root"></div>
     <div id="ui-root"></div>

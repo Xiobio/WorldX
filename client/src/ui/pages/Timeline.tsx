@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "../services/api-client";
 import type { SimulationEvent, CharacterInfo, LocationInfo } from "../../types/api";
 import {
@@ -11,6 +12,7 @@ import {
 
 export function Timeline() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [events, setEvents] = useState<SimulationEvent[]>([]);
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [locations, setLocations] = useState<LocationInfo[]>([]);
@@ -64,7 +66,7 @@ export function Timeline() {
         }}
       >
         <h2 style={{ textAlign: "center", fontSize: 18, marginBottom: 16 }}>
-          事件时间线
+          {t("timeline.title")}
         </h2>
 
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 20, gap: 8 }}>
@@ -80,7 +82,7 @@ export function Timeline() {
             fontSize: 12,
           }}
         >
-          <option value="">全部角色</option>
+          <option value="">{t("timeline.allCharacters")}</option>
           {characters.map((c) => (
             <option key={c.id} value={c.id}>
               {c.name} ({c.mbti})
@@ -129,7 +131,7 @@ export function Timeline() {
         ))}
         {days.length === 0 && (
           <div style={{ textAlign: "center", color: "#666", padding: 40 }}>
-            暂无事件数据
+            {t("timeline.noEvents")}
           </div>
         )}
       </div>
@@ -163,7 +165,7 @@ export function Timeline() {
             pointerEvents: "auto",
           }}
         >
-          ← 返回小镇
+          {t("timeline.backToWorld")}
         </button>
       </div>
     </>

@@ -1,6 +1,12 @@
 import Phaser from "phaser";
 import { apiClient } from "../ui/services/api-client";
-import type { GameTime, SimulationEvent, WorldTimeInfo } from "../types/api";
+import type {
+  GameTime,
+  SimulationEvent,
+  WorldTimeInfo,
+  TimelineFrame,
+  TimelineTickFrame,
+} from "../types/api";
 
 type TickResponse = {
   ok: boolean;
@@ -8,6 +14,8 @@ type TickResponse = {
   eventCount: number;
   events: SimulationEvent[];
 };
+
+export type PlaybackMode = "live" | "replay";
 
 export class PlaybackController extends Phaser.Events.EventEmitter {
   private currentTime: WorldTimeInfo = {
@@ -23,6 +31,15 @@ export class PlaybackController extends Phaser.Events.EventEmitter {
   private playbackInProgress = false;
   private requestInFlight = false;
   private prefetchedTick: TickResponse | null = null;
+  private cycleTicks = 48;
+  private curtainDropped = false;
+
+  private mode: PlaybackMode = "live";
+  private replayFrames: TimelineFrame[] = [];
+  private replayIndex = 0;
+  private replayAutoPlay = false;
+  private replayNextDueAt = 0;
+  private replayTickStartedAt = 0;
 
   constructor(private globalEventBus: Phaser.Events.EventEmitter) {
     super();
@@ -40,12 +57,169 @@ export class PlaybackController extends Phaser.Events.EventEmitter {
     return { ...this.currentTime };
   }
 
+  getMode(): PlaybackMode {
+    return this.mode;
+  }
+
+  setCycleTicks(n: number): void {
+    this.cycleTicks = n;
+  }
+
+  // --- Replay mode ---
+
+  async startReplay(timelineId: string): Promise<void> {
+    if (this.mode === "replay") return;
+
+    this.autoPlay = false;
+    this.prefetchedTick = null;
+
+    try {
+      const { frames } = await apiClient.getTimelineEvents(timelineId);
+      if (frames.length === 0) {
+        console.warn("[PlaybackController] No events to replay");
+        return;
+      }
+
+      this.mode = "replay";
+      this.replayFrames = frames;
+      this.replayIndex = 0;
+      this.replayAutoPlay = false;
+
+      const initFrame = frames[0];
+      if (initFrame.type === "init") {
+        this.globalEventBus.emit("replay_init", initFrame);
+        this.replayIndex = 1;
+      }
+
+      const totalTicks = frames.filter((f) => f.type === "tick").length;
+      this.globalEventBus.emit("set_replay_mode", { active: true });
+      this.globalEventBus.emit("replay_progress", {
+        current: 0,
+        total: totalTicks,
+      });
+      this.emitPlaybackState();
+    } catch (err) {
+      console.error("[PlaybackController] Failed to start replay:", err);
+      this.globalEventBus.emit("simulation_status", {
+        status: "error",
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  stopReplay(): void {
+    if (this.mode !== "replay") return;
+
+    this.mode = "live";
+    this.replayFrames = [];
+    this.replayIndex = 0;
+    this.replayAutoPlay = false;
+    this.playbackInProgress = false;
+
+    this.globalEventBus.emit("set_replay_mode", { active: false });
+    this.globalEventBus.emit("replay_ended");
+    this.globalEventBus.emit("simulation_status", { status: "idle" });
+    this.emitPlaybackState();
+  }
+
+  setReplayAutoPlay(enabled: boolean): void {
+    this.replayAutoPlay = enabled;
+    this.replayNextDueAt = enabled ? performance.now() : 0;
+    this.emitPlaybackState();
+  }
+
+  // --- Main update loop ---
+
   update(_delta: number): void {
+    if (this.mode === "replay") {
+      this.updateReplay();
+      return;
+    }
+
     if (!this.autoPlay || this.playbackInProgress) return;
     if (performance.now() < this.nextTickDueAt) return;
     if (this.requestInFlight && !this.prefetchedTick) return;
     void this.devAdvanceTick();
   }
+
+  private updateReplay(): void {
+    if (!this.replayAutoPlay || this.playbackInProgress) return;
+    if (performance.now() < this.replayNextDueAt) return;
+    void this.advanceReplayTick();
+  }
+
+  private async advanceReplayTick(): Promise<void> {
+    if (this.replayIndex >= this.replayFrames.length) {
+      this.replayAutoPlay = false;
+      this.globalEventBus.emit("replay_finished");
+      this.emitPlaybackState();
+      return;
+    }
+
+    this.playbackInProgress = true;
+    this.replayTickStartedAt = performance.now();
+
+    const frame = this.replayFrames[this.replayIndex];
+    this.replayIndex++;
+
+    if (frame.type !== "tick") {
+      this.playbackInProgress = false;
+      return;
+    }
+
+    const tickFrame = frame as TimelineTickFrame;
+    const events = tickFrame.events ?? [];
+
+    this.currentTime = {
+      ...this.currentTime,
+      day: tickFrame.gameTime.day,
+      tick: tickFrame.gameTime.tick,
+    };
+
+    this.globalEventBus.emit("tick_playback_started", {
+      gameTime: tickFrame.gameTime,
+      eventCount: events.length,
+    });
+
+    for (const event of events) {
+      this.emit("event", event);
+    }
+
+    this.globalEventBus.emit("time_update", { ...this.currentTime });
+    this.globalEventBus.emit("tick_playback_events_flushed", {
+      gameTime: tickFrame.gameTime,
+      eventCount: events.length,
+    });
+
+    const ticksPlayed = this.replayFrames
+      .slice(0, this.replayIndex)
+      .filter((f) => f.type === "tick").length;
+    const totalTicks = this.replayFrames.filter((f) => f.type === "tick").length;
+    this.globalEventBus.emit("replay_progress", {
+      current: ticksPlayed,
+      total: totalTicks,
+    });
+
+    try {
+      await this.waitForTickPlaybackCompletion(events.length);
+    } catch {
+      // continue
+    }
+
+    this.playbackInProgress = false;
+
+    if (this.replayAutoPlay) {
+      this.replayNextDueAt = this.replayTickStartedAt + this.tickIntervalMs;
+    }
+
+    if (this.replayIndex >= this.replayFrames.length) {
+      this.replayAutoPlay = false;
+      this.globalEventBus.emit("replay_finished");
+      this.emitPlaybackState();
+    }
+  }
+
+  // --- Live mode ---
 
   async seekTo(time: GameTime): Promise<void> {
     this.currentTime = {
@@ -56,16 +230,25 @@ export class PlaybackController extends Phaser.Events.EventEmitter {
   }
 
   pause(): void {
+    if (this.mode === "replay") {
+      this.setReplayAutoPlay(false);
+      return;
+    }
     this.setAutoPlay(false);
     this.globalEventBus.emit("simulation_status", { status: "paused" });
   }
 
   resume(): void {
+    if (this.mode === "replay") {
+      this.setReplayAutoPlay(true);
+      return;
+    }
     this.setAutoPlay(true);
     this.globalEventBus.emit("simulation_status", { status: "idle" });
   }
 
   setAutoPlay(enabled: boolean): void {
+    if (this.mode === "replay") return;
     this.autoPlay = enabled;
     this.nextTickDueAt = enabled ? performance.now() : 0;
     this.emitPlaybackState();
@@ -73,6 +256,10 @@ export class PlaybackController extends Phaser.Events.EventEmitter {
 
   setTickIntervalMs(value: number): void {
     this.tickIntervalMs = value;
+    if (this.mode === "replay") {
+      this.emitPlaybackState();
+      return;
+    }
     if (!this.autoPlay) {
       this.nextTickDueAt = 0;
     } else if (this.tickStartedAt > 0) {
@@ -84,10 +271,25 @@ export class PlaybackController extends Phaser.Events.EventEmitter {
   }
 
   async devAdvanceTick(): Promise<void> {
+    if (this.mode === "replay") return;
     if (this.playbackInProgress) return;
+
+    const isTransitioning = this.currentTime.tick === this.cycleTicks - 1;
+    if (isTransitioning && !this.curtainDropped) {
+      this.curtainDropped = true;
+      this.playbackInProgress = true;
+      await new Promise<void>((resolve) => {
+        this.globalEventBus.emit("scene_ending", { day: this.currentTime.day });
+        this.globalEventBus.once("scene_covered", () => resolve());
+        setTimeout(resolve, 2000); // safety fallback
+      });
+      this.playbackInProgress = false;
+    }
+
     if (this.requestInFlight && !this.prefetchedTick) return;
 
     this.playbackInProgress = true;
+    this.curtainDropped = false;
     this.tickStartedAt = performance.now();
     this.globalEventBus.emit("simulation_status", {
       status: "running",
@@ -183,8 +385,9 @@ export class PlaybackController extends Phaser.Events.EventEmitter {
 
   private emitPlaybackState(): void {
     this.globalEventBus.emit("playback_state", {
-      autoPlay: this.autoPlay,
+      autoPlay: this.mode === "replay" ? this.replayAutoPlay : this.autoPlay,
       tickIntervalMs: this.tickIntervalMs,
+      mode: this.mode,
     });
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { CharacterDetail } from "./CharacterDetail";
 import { apiClient } from "../services/api-client";
 import type { CharacterInfo, SimulationEvent } from "../../types/api";
@@ -17,6 +18,7 @@ export function SidePanel({
   onToggleFollow: (id: string) => void;
   events: SimulationEvent[];
 }) {
+  const { t } = useTranslation();
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [open, setOpen] = useState(false);
 
@@ -92,12 +94,12 @@ export function SidePanel({
           e.currentTarget.style.background = "linear-gradient(90deg, rgba(26,26,46,0.95), rgba(30,30,50,0.8))";
           e.currentTarget.style.color = "#e0e0e0";
         }}
-        title={open ? "收起角色面板" : "展开角色面板"}
+        title={open ? t("sidePanel.collapseTitle") : t("sidePanel.expandTitle")}
       >
         {open ? "▸" : "◂"}
       </button>
 
-      <div style={{ flex: 1, overflow: "auto", padding: "8px 12px", opacity: open ? 1 : 0, transition: "opacity 0.2s" }}>
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: "8px 12px", opacity: open ? 1 : 0, transition: "opacity 0.2s" }}>
           <div
             style={{
               display: "flex",
@@ -105,10 +107,11 @@ export function SidePanel({
               justifyContent: "space-between",
               marginBottom: 12,
               gap: 8,
+              flexShrink: 0,
             }}
           >
             <h3 style={{ color: "#e0e0e0", fontSize: 14, margin: 0 }}>
-              {selectedCharId ? "角色面板" : "角色列表"}
+              {selectedCharId ? t("sidePanel.charPanel") : t("sidePanel.charList")}
             </h3>
             <button
               onClick={togglePanel}
@@ -122,12 +125,12 @@ export function SidePanel({
                 padding: "4px 8px",
               }}
             >
-              收起
+              {t("sidePanel.collapse")}
             </button>
           </div>
 
-          <div style={{ marginBottom: 12 }}>
-            <h3 style={{ color: "#e0e0e0", fontSize: 13, marginBottom: 8 }}>角色列表</h3>
+          <div className="custom-scrollbar" style={{ marginBottom: 12, flexShrink: 0, maxHeight: "30vh", overflowY: "auto", paddingRight: 4 }}>
+            <h3 style={{ color: "#e0e0e0", fontSize: 13, marginBottom: 8, position: "sticky", top: 0, background: "rgba(20,20,40,0.9)", zIndex: 1, paddingBottom: 4 }}>{t("sidePanel.charList")}</h3>
             {characters.map((c) => (
               <div
                 key={c.id}

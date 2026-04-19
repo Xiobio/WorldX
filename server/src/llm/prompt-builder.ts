@@ -1,5 +1,8 @@
 import { loadPromptTemplate } from "../utils/config-loader.js";
-import { tickToSceneTimeWithPeriod } from "../utils/time-helpers.js";
+import {
+  tickToSceneTimeWithPeriod,
+  getSceneEndingHint,
+} from "../utils/time-helpers.js";
 import type {
   CharacterProfile,
   CharacterState,
@@ -27,7 +30,12 @@ const TEMPLATE_NAMES = [
 
 let initialized = false;
 
+const ENGLISH_LANG_HINT =
+  "\n\n[LANGUAGE] This world uses English. ALL your output — dialogue lines, action labels, inner monologue, reasoning, memory summaries, and every other user-visible string — MUST be written in English.";
+
 export class PromptBuilder {
+  private contentLanguage: "zh" | "en" = "zh";
+
   initialize(): void {
     for (const name of TEMPLATE_NAMES) {
       loadPromptTemplate(name);
@@ -35,11 +43,19 @@ export class PromptBuilder {
     initialized = true;
   }
 
+  setContentLanguage(lang: "zh" | "en"): void {
+    this.contentLanguage = lang;
+  }
+
   build(templateName: string, variables: Record<string, string>): string {
     const template = loadPromptTemplate(templateName);
-    return template.replace(/\{\{(\w+)\}\}/g, (_match, key) => {
+    let result = template.replace(/\{\{(\w+)\}\}/g, (_match, key) => {
       return variables[key] ?? `{{${key}}}`;
     });
+    if (this.contentLanguage === "en") {
+      result += ENGLISH_LANG_HINT;
+    }
+    return result;
   }
 
   buildReactiveDecisionMessages(params: {
@@ -50,6 +66,7 @@ export class PromptBuilder {
     relevantMemories: string;
     actionMenu: string;
     currentFocus?: string;
+    worldSocialContext?: string;
   }): Message[] {
     const { profile, state, gameTime, perception } = params;
 
@@ -61,6 +78,8 @@ export class PromptBuilder {
 
     const perceptionText = formatPerception(perception);
 
+    const sceneEndingHint = getSceneEndingHint(gameTime.tick);
+
     const content = this.build("reactive-decision", {
       name: profile.name,
       mbtiType: profile.mbtiType,
@@ -68,9 +87,11 @@ export class PromptBuilder {
       speakingStyle: profile.speakingStyle,
       day: String(gameTime.day),
       timeString,
+      sceneEndingHint,
       currentLocation: perception.currentLocation,
       emotionLabel,
       currentFocus: params.currentFocus || "",
+      worldSocialContext: formatWorldSocialContext(params.worldSocialContext),
       perceptionText,
       relevantMemories: params.relevantMemories || "（无相关记忆）",
       actionMenu: params.actionMenu,
@@ -91,6 +112,7 @@ export class PromptBuilder {
     initiatorId: string;
     initiatorMotivation: string;
     gameTime: GameTime;
+    worldSocialContext?: string;
   }): Message[] {
     const { participants, location, initiatorId, gameTime } = params;
 
@@ -129,6 +151,7 @@ export class PromptBuilder {
       tensionBA: String(Math.round(b.relationship.tension)),
       memoriesBaboutA: b.memoriesAboutOther || "（无）",
 
+      worldSocialContext: formatWorldSocialContext(params.worldSocialContext),
       location,
       day: String(gameTime.day),
       timeString,
@@ -153,6 +176,7 @@ export class PromptBuilder {
     totalTurns: number;
     hearsayA?: string;
     hearsayB?: string;
+    worldSocialContext?: string;
   }): Message[] {
     const { participants, location, initiatorId, gameTime } = params;
 
@@ -162,6 +186,7 @@ export class PromptBuilder {
       (p) => p.profile.id === params.nextSpeaker,
     )?.profile;
     const timeString = tickToSceneTimeWithPeriod(gameTime.tick);
+    const sceneEndingHint = getSceneEndingHint(gameTime.tick);
 
     const content = this.build("dialogue-turn", {
       nameA: a.profile.name,
@@ -197,9 +222,11 @@ export class PromptBuilder {
       memoriesBaboutA: b.memoriesAboutOther || "（无）",
       hearsayB: params.hearsayB || "（无）",
 
+      worldSocialContext: formatWorldSocialContext(params.worldSocialContext),
       location,
       day: String(gameTime.day),
       timeString,
+      sceneEndingHint,
       transcript: formatTranscript(params.transcript),
       nextSpeakerId: params.nextSpeaker,
       nextSpeakerName: nextSpeakerProfile?.name ?? params.nextSpeaker,
@@ -223,6 +250,7 @@ export class PromptBuilder {
     gameTime: GameTime;
     transcript: { speaker: string; content: string }[];
     endReason?: string;
+    worldSocialContext?: string;
   }): Message[] {
     const { participants, location, initiatorId, gameTime } = params;
 
@@ -243,6 +271,7 @@ export class PromptBuilder {
       affectionBA: String(Math.round(b.relationship.affection)),
       trustBA: String(Math.round(b.relationship.trust)),
       tensionBA: String(Math.round(b.relationship.tension)),
+      worldSocialContext: formatWorldSocialContext(params.worldSocialContext),
       location,
       day: String(gameTime.day),
       timeString,
@@ -413,14 +442,20 @@ function formatPerception(p: Perception): string {
   if (p.charactersHere.length > 0) {
     lines.push("能看到的人：");
     for (const c of p.charactersHere) {
-      const locationHint =
-        c.locationName && c.locationName !== p.currentLocation
-          ? `（在${c.locationName}）`
-          : "";
-      const emotionHint = c.emotionLabel ? `（看起来${c.emotionLabel}）` : "";
-      lines.push(
-        `  - ${c.name}${locationHint}${c.currentAction ? "正在" + c.currentAction : ""}${emotionHint}`,
-      );
+      const detailParts: string[] = [];
+      if (c.locationName && c.locationName !== p.currentLocation) {
+        detailParts.push(`在${c.locationName}`);
+      }
+      if (c.currentAction) {
+        detailParts.push(`正在${c.currentAction}`);
+      }
+      if (c.appearanceHint) {
+        detailParts.push(c.appearanceHint);
+      }
+      if (c.emotionLabel) {
+        detailParts.push(`看起来${c.emotionLabel}`);
+      }
+      lines.push(`  - ${c.name}${detailParts.length > 0 ? `（${detailParts.join("；")}）` : ""}`);
     }
   }
 
@@ -438,6 +473,12 @@ function formatPerception(p: Perception): string {
 function formatTranscript(turns: { speaker: string; content: string }[]): string {
   if (turns.length === 0) return "（对话尚未开始）";
   return turns.map((turn) => `- ${turn.speaker}: ${turn.content}`).join("\n");
+}
+
+function formatWorldSocialContext(context?: string): string {
+  const trimmed = typeof context === "string" ? context.trim() : "";
+  if (trimmed) return trimmed;
+  return "这是一个有自身日常秩序的小世界。让背景只作为处事底色，别机械复述设定。";
 }
 
 function formatIconicCuesBlock(profile: CharacterProfile): string {

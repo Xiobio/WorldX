@@ -4,7 +4,7 @@
  * Usage:
  *   node src/index.mjs "角色描述文字"
  *   node src/index.mjs "现代女性，橙色连帽衫，蓝色牛仔裤，黄色长发"
- *   node src/index.mjs "中世纪骑士，银色盔甲，红色披风，短发" --name "Knight"
+ *   node src/index.mjs "中世纪骑士，银色盔甲，红色披风，短发" --name "Knight" --role "守城骑士" --world-visual-context "中世纪边境城堡"
  */
 
 import dotenv from "dotenv";
@@ -29,16 +29,27 @@ installPhaseStepLogPrefix("Phase 3");
 
 async function main() {
   const args = process.argv.slice(2);
-  const nameIdx = args.indexOf("--name");
   let charName = null;
-  if (nameIdx !== -1) {
-    charName = args[nameIdx + 1];
-    args.splice(nameIdx, 2);
-  }
+  let charRole = "";
+  let worldVisualContext = "";
+
+  const extractOption = (flag) => {
+    const idx = args.indexOf(flag);
+    if (idx === -1) return null;
+    const value = args[idx + 1] ?? "";
+    args.splice(idx, 2);
+    return value;
+  };
+
+  charName = extractOption("--name");
+  charRole = extractOption("--role") ?? "";
+  worldVisualContext = extractOption("--world-visual-context") ?? "";
 
   const description = args.join(" ").trim();
   if (!description) {
-    console.error("Usage: node src/index.mjs \"角色描述\" [--name CharName]");
+    console.error(
+      "Usage: node src/index.mjs \"角色描述\" [--name CharName] [--role CharRole] [--world-visual-context Context]",
+    );
     process.exit(1);
   }
 
@@ -48,6 +59,8 @@ async function main() {
   console.log(`\n=== Character Generator ===`);
   console.log(`ID:          ${charId}`);
   console.log(`Name:        ${charName}`);
+  if (charRole) console.log(`Role:        ${charRole}`);
+  if (worldVisualContext) console.log(`World ref:   ${worldVisualContext}`);
   console.log(`Description: ${description}`);
   console.log();
 
@@ -64,10 +77,11 @@ async function main() {
     "utf-8",
   );
 
-  const promptText = promptTemplate.replace(
-    /\{\{characterDescription\}\}/g,
-    description,
-  );
+  const promptText = promptTemplate
+    .replace(/\{\{characterRole\}\}/g, charRole || "未特别指定")
+    .replace(/\{\{characterAppearance\}\}/g, description)
+    .replace(/\{\{worldVisualContext\}\}/g, worldVisualContext || "未提供")
+    .replace(/\{\{characterDescription\}\}/g, description);
 
   let spriteBuffer;
   try {

@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// `server/src/core` is 3 levels below WorldSpark root.
+// `server/src/core` is 3 levels below WorldX root.
 const WORLDSPARK_ROOT = path.resolve(__dirname, "../../..");
 const ORCHESTRATOR_ENTRY = path.join(WORLDSPARK_ROOT, "orchestrator/src/index.mjs");
 const GENERATED_WORLDS_DIR = path.join(WORLDSPARK_ROOT, "output/worlds");
@@ -134,7 +134,7 @@ class CreateJobManager extends EventEmitter {
     this.finishError(job, "Generation stopped by user");
   }
 
-  startJob(params: { prompt: string; sizeK: 1 | 2 | 4 }): { jobId: string } {
+  startJob(params: { prompt: string; sizeK: 1 | 2 | 4; keepArtifacts?: boolean }): { jobId: string } {
     if (this.hasActiveJob()) {
       throw new JobConflictError(this.current!.jobId);
     }
@@ -157,6 +157,7 @@ class CreateJobManager extends EventEmitter {
         env: {
           ...process.env,
           MAP_IMAGE_SIZE_K: String(params.sizeK),
+          KEEP_GENERATION_ARTIFACTS: params.keepArtifacts ? "1" : "0",
           FORCE_COLOR: "0",
         },
         stdio: ["ignore", "pipe", "pipe"],
@@ -283,7 +284,7 @@ class CreateJobManager extends EventEmitter {
       writeFileSync(
         logPath,
         [
-          `=== WorldSpark Generation Log — ${new Date(job.startedAt).toISOString()} ===`,
+          `=== WorldX Generation Log — ${new Date(job.startedAt).toISOString()} ===`,
           `Job ID: ${job.jobId}`,
           `World ID: ${worldId}`,
           `Prompt: ${job.prompt}`,

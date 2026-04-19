@@ -18,6 +18,7 @@ import { createPublicContentRouter } from "./api/routes/content.js";
 import simulationRoutes from "./api/routes/simulation.js";
 import godRoutes from "./api/routes/god.js";
 import sandboxChatRoutes from "./api/routes/sandbox-chat.js";
+import timelineRoutes from "./api/routes/timeline.js";
 import { resolveInitialWorldDir } from "./utils/world-directories.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -64,23 +65,23 @@ async function main() {
 
   const worldDir = resolveInitialWorldDir();
   if (worldDir) {
-    console.log(`[WorldSpark] World dir: ${worldDir}`);
+    console.log(`[WorldX] World dir: ${worldDir}`);
   } else {
-    console.log("[WorldSpark] No generated world found — server starting in empty mode. Navigate to /create to generate your first world.");
+    console.log("[WorldX] No generated world found — server starting in empty mode. Navigate to /create to generate your first world.");
   }
 
   await appContext.initialize(worldDir);
-  console.log("[WorldSpark] All systems initialized");
+  console.log("[WorldX] All systems initialized");
 
   app.get("/api/health", (_req, res) => {
     if (!appContext.hasWorld) {
-      res.json({ status: "ok", project: "world-spark", worldName: null, sceneConfig: null });
+      res.json({ status: "ok", project: "world-x", worldName: null, sceneConfig: null });
       return;
     }
     const wm = appContext.worldManager;
     res.json({
       status: "ok",
-      project: "world-spark",
+      project: "world-x",
       worldName: wm.getWorldName(),
       sceneConfig: wm.getSceneConfig(),
     });
@@ -106,6 +107,7 @@ async function main() {
   app.use("/api/simulation", requireWorld, simulationRoutes);
   app.use("/api/god", requireWorld, godRoutes);
   app.use("/api/sandbox/chat", requireWorld, sandboxChatRoutes);
+  app.use("/api/timelines", timelineRoutes);
 
   app.use("/assets/map", createWorldAssetHandler("map"));
   app.use("/assets/characters", createWorldAssetHandler("characters"));
@@ -124,12 +126,12 @@ async function main() {
 
   const PORT = process.env.PORT || 3100;
   server.listen(PORT, () => {
-    console.log(`[WorldSeed] Server running on http://localhost:${PORT}`);
-    console.log(`[WorldSeed] WebSocket available on ws://localhost:${PORT}`);
+    console.log(`[WorldX] Server running on http://localhost:${PORT}`);
+    console.log(`[WorldX] WebSocket available on ws://localhost:${PORT}`);
   });
 }
 
 main().catch((err) => {
-  console.error("[WorldSeed] Fatal error during startup:", err);
+  console.error("[WorldX] Fatal error during startup:", err);
   process.exit(1);
 });

@@ -12,6 +12,9 @@ import type {
   MainAreaPointInfo,
   SceneConfigInfo,
   SceneRuntimeInfo,
+  TimelineMeta,
+  TimelineWithWorld,
+  TimelineFrame,
 } from "../../types/api";
 
 const API_BASE = "/api";
@@ -62,20 +65,27 @@ export interface WorldInfo {
   worldName: string;
   worldDescription: string;
   currentWorldId?: string | null;
+  currentTimelineId?: string | null;
   sceneConfig: SceneConfigInfo;
   sceneRuntime: SceneRuntimeInfo;
   mainAreaPoints?: MainAreaPointInfo[];
 }
 
+export type WorldSource = "user" | "library";
+
 export interface GeneratedWorldSummary {
   id: string;
   worldName: string;
+  source: WorldSource;
   isCurrent: boolean;
+  timelineCount?: number;
 }
 
 export interface GeneratedWorldListResponse {
   currentWorldId: string | null;
+  currentTimelineId: string | null;
   worlds: GeneratedWorldSummary[];
+  libraryWorlds: GeneratedWorldSummary[];
 }
 
 export type CreateJobSizeK = 1 | 2 | 4;
@@ -299,6 +309,7 @@ export const apiClient = {
   async createWorld(params: {
     prompt: string;
     sizeK: CreateJobSizeK;
+    keepArtifacts?: boolean;
   }): Promise<{ ok: boolean; jobId: string }> {
     const res = await fetch(`${API_BASE}/worlds/create`, {
       method: "POST",
@@ -362,5 +373,47 @@ export const apiClient = {
 
   deleteWorld(worldId: string): Promise<{ ok: boolean; deletedWorldId: string }> {
     return deleteJSON(`/world/worlds/${encodeURIComponent(worldId)}`);
+  },
+
+  // --- Timeline APIs ---
+
+  getTimelines(): Promise<{ timelines: TimelineMeta[]; currentTimelineId: string | null }> {
+    return fetchJSON("/timelines");
+  },
+
+  getCurrentTimeline(): Promise<{ timeline: TimelineMeta }> {
+    return fetchJSON("/timelines/current");
+  },
+
+  createNewTimeline(): Promise<{ ok: boolean; timelineId: string }> {
+    return postJSON("/timelines");
+  },
+
+  loadTimeline(timelineId: string): Promise<{ ok: boolean }> {
+    return postJSON(`/timelines/${encodeURIComponent(timelineId)}/load`);
+  },
+
+  deleteTimeline(timelineId: string): Promise<{ ok: boolean }> {
+    return deleteJSON(`/timelines/${encodeURIComponent(timelineId)}`);
+  },
+
+  getTimelineEvents(timelineId: string): Promise<{ frames: TimelineFrame[] }> {
+    return fetchJSON(`/timelines/${encodeURIComponent(timelineId)}/events`);
+  },
+
+  getAllTimelinesGrouped(): Promise<{
+    groups: TimelineWithWorld[];
+    currentTimelineId: string | null;
+  }> {
+    return fetchJSON("/timelines/all");
+  },
+
+  deleteTimelineFromWorld(
+    worldId: string,
+    timelineId: string,
+  ): Promise<{ ok: boolean }> {
+    return deleteJSON(
+      `/timelines/world/${encodeURIComponent(worldId)}/${encodeURIComponent(timelineId)}`,
+    );
   },
 };

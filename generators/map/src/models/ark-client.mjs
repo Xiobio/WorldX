@@ -1,6 +1,6 @@
 /**
  * Volcengine Ark (ark-code-latest) client — OpenAI-compatible chat completions.
- * Used as the main orchestrator / complexity gating model.
+ * Used as the main map-generation model client.
  */
 
 import { logModelCall, logModelResponse, logError } from "../utils/logger.mjs";

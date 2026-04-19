@@ -1,20 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "../services/api-client";
 import type { CharacterInfo } from "../../types/api";
 
-type TabKey = "broadcast" | "whisper" | "presets";
+type TabKey = "broadcast" | "whisper";
 
-const PRESET_CARDS: Array<{ label: string; content: string; emoji: string; tone?: string }> = [
-  { emoji: "☔", label: "下大雨", content: "天空忽然下起倾盆大雨，所有人都能听到雨砸在屋顶上的声音。", tone: "tense" },
-  { emoji: "🔌", label: "停电了", content: "整个区域忽然陷入漆黑——停电了，只有零星的烛光和手机屏幕。", tone: "eerie" },
-  { emoji: "🚪", label: "陌生人敲门", content: "一个没人认识的陌生人出现在门口，似乎在打听什么。", tone: "mysterious" },
-  { emoji: "📜", label: "发现一封信", content: "有人在桌上发现了一封没有署名的信，内容让人心绪不宁。", tone: "ominous" },
-  { emoji: "🌪️", label: "狂风大作", content: "狂风忽然席卷而来，外面的东西被吹得到处都是。", tone: "chaotic" },
-  { emoji: "🐦", label: "诡异鸟群", content: "一群黑色的鸟在空中盘旋，久久不散，像是在盯着什么。", tone: "eerie" },
+const PRESET_CARD_KEYS = [
+  { emoji: "☔", labelKey: "god.presetRain", contentKey: "god.presetRainContent", tone: "tense" },
+  { emoji: "🔌", labelKey: "god.presetBlackout", contentKey: "god.presetBlackoutContent", tone: "eerie" },
+  { emoji: "🚪", labelKey: "god.presetStranger", contentKey: "god.presetStrangerContent", tone: "mysterious" },
+  { emoji: "📜", labelKey: "god.presetLetter", contentKey: "god.presetLetterContent", tone: "ominous" },
+  { emoji: "🌪️", labelKey: "god.presetWind", contentKey: "god.presetWindContent", tone: "chaotic" },
+  { emoji: "🐦", labelKey: "god.presetBirds", contentKey: "god.presetBirdsContent", tone: "eerie" },
 ];
 
 export function GodPanel({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [tab, setTab] = useState<TabKey>("broadcast");
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [flash, setFlash] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
@@ -56,7 +58,7 @@ export function GodPanel({ onClose }: { onClose: () => void }) {
     if (busy) return;
     const trimmed = content.trim();
     if (!trimmed) {
-      showFlash("err", "内容不能为空");
+      showFlash("err", t("god.emptyContent"));
       return;
     }
     setBusy(true);
@@ -66,11 +68,11 @@ export function GodPanel({ onClose }: { onClose: () => void }) {
         scope: scope || broadcastScope,
         tone: tone || broadcastTone || undefined,
       });
-      showFlash("ok", `已广播给 ${resp.memoryWrittenTo} 位角色`);
+      showFlash("ok", t("god.broadcastSuccess", { count: resp.memoryWrittenTo }));
       setLastBroadcastAt(Date.now());
       setBroadcastContent("");
     } catch (err) {
-      showFlash("err", `失败：${err instanceof Error ? err.message : String(err)}`);
+      showFlash("err", t("god.failedPrefix", { error: err instanceof Error ? err.message : String(err) }));
     } finally {
       setBusy(false);
     }
@@ -79,12 +81,12 @@ export function GodPanel({ onClose }: { onClose: () => void }) {
   const doWhisper = async () => {
     if (busy) return;
     if (!whisperCharId) {
-      showFlash("err", "请选择角色");
+      showFlash("err", t("god.selectCharError"));
       return;
     }
     const trimmed = whisperContent.trim();
     if (!trimmed) {
-      showFlash("err", "内容不能为空");
+      showFlash("err", t("god.emptyContent"));
       return;
     }
     setBusy(true);
@@ -96,10 +98,10 @@ export function GodPanel({ onClose }: { onClose: () => void }) {
         type: whisperType,
       });
       const charName = characters.find((c) => c.id === whisperCharId)?.name ?? whisperCharId;
-      showFlash("ok", `已对"${charName}"植入记忆`);
+      showFlash("ok", t("god.whisperSuccess", { name: charName }));
       setWhisperContent("");
     } catch (err) {
-      showFlash("err", `失败：${err instanceof Error ? err.message : String(err)}`);
+      showFlash("err", t("god.failedPrefix", { error: err instanceof Error ? err.message : String(err) }));
     } finally {
       setBusy(false);
     }
@@ -111,22 +113,22 @@ export function GodPanel({ onClose }: { onClose: () => void }) {
         <div style={headerStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 16 }}>👁️</span>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>上帝视角</span>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>{t("god.title")}</span>
             <span style={{ opacity: 0.55, fontSize: 11 }}>
-              向世界注入事件或记忆。LLM 会让角色"感知到"这些改变。
+              {t("god.subtitle")}
             </span>
           </div>
           <button onClick={onClose} style={closeBtnStyle}>×</button>
         </div>
 
         <div style={tabsStyle}>
-          {(["broadcast", "presets", "whisper"] as TabKey[]).map((key) => (
+          {(["broadcast", "whisper"] as TabKey[]).map((key) => (
             <button
               key={key}
               onClick={() => setTab(key)}
               style={tabBtnStyle(tab === key)}
             >
-              {key === "broadcast" ? "世界广播" : key === "presets" ? "灾难卡" : "耳语/托梦"}
+              {key === "broadcast" ? t("god.tabBroadcast") : t("god.tabWhisper")}
             </button>
           ))}
         </div>
@@ -134,68 +136,59 @@ export function GodPanel({ onClose }: { onClose: () => void }) {
         <div style={bodyStyle}>
           {tab === "broadcast" && (
             <div style={sectionStyle}>
-              <label style={labelStyle}>广播内容</label>
+              <label style={labelStyle}>{t("god.broadcastContent")}</label>
               <textarea
                 value={broadcastContent}
                 onChange={(e) => setBroadcastContent(e.target.value)}
-                placeholder="例：天空忽然下起倾盆大雨……"
+                placeholder={t("god.broadcastPlaceholder")}
                 rows={4}
                 style={textareaStyle}
               />
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 11, opacity: 0.7 }}>范围</span>
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>{t("god.scopeLabel")}</span>
                   <select
                     value={broadcastScope}
                     onChange={(e) => setBroadcastScope(e.target.value)}
                     style={selectStyle}
                   >
-                    <option value="global">全世界</option>
+                    <option value="global">{t("god.scopeGlobal")}</option>
                     <option value="main_area">main_area</option>
                   </select>
                 </div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 11, opacity: 0.7 }}>氛围</span>
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>{t("god.toneLabel")}</span>
                   <input
                     type="text"
                     value={broadcastTone}
                     onChange={(e) => setBroadcastTone(e.target.value)}
-                    placeholder="eerie / tense / joyful ..."
+                    placeholder={t("god.tonePlaceholder")}
                     style={{ ...inputStyle, width: 180 }}
                   />
                 </div>
               </div>
-              {recentlyBroadcasted && (
-                <div style={{ fontSize: 11, color: "#f7d08a" }}>
-                  ⚠ 30 秒内刚刚广播过——频繁广播会稀释戏剧节奏。
-                </div>
-              )}
               <button
                 onClick={() => doBroadcast(broadcastContent)}
                 disabled={busy}
                 style={primaryBtnStyle(busy)}
               >
-                {busy ? "发送中..." : "向世界广播"}
+                {busy ? t("god.sending") : t("god.broadcast")}
               </button>
-            </div>
-          )}
 
-          {tab === "presets" && (
-            <div style={sectionStyle}>
-              <div style={{ fontSize: 11, opacity: 0.7 }}>
-                点一下立刻广播。建议配合对话进行中使用，戏剧效果更好。
+              <div style={presetDividerStyle}>
+                <span style={{ fontSize: 11, opacity: 0.5 }}>{t("god.disasterCards")}</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                {PRESET_CARDS.map((card) => (
+                {PRESET_CARD_KEYS.map((card) => (
                   <button
-                    key={card.label}
+                    key={card.labelKey}
                     disabled={busy}
-                    onClick={() => doBroadcast(card.content, card.tone)}
+                    onClick={() => doBroadcast(t(card.contentKey), card.tone)}
                     style={presetCardStyle(busy)}
                   >
                     <div style={{ fontSize: 18 }}>{card.emoji}</div>
-                    <div style={{ fontWeight: 600, fontSize: 12 }}>{card.label}</div>
-                    <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4 }}>{card.content}</div>
+                    <div style={{ fontWeight: 600, fontSize: 12 }}>{t(card.labelKey)}</div>
+                    <div style={{ fontSize: 10, opacity: 0.6, marginTop: 4 }}>{t(card.contentKey)}</div>
                   </button>
                 ))}
               </div>
@@ -204,7 +197,7 @@ export function GodPanel({ onClose }: { onClose: () => void }) {
 
           {tab === "whisper" && (
             <div style={sectionStyle}>
-              <label style={labelStyle}>耳语给谁</label>
+              <label style={labelStyle}>{t("god.whisperTarget")}</label>
               <select
                 value={whisperCharId}
                 onChange={(e) => setWhisperCharId(e.target.value)}
@@ -216,20 +209,20 @@ export function GodPanel({ onClose }: { onClose: () => void }) {
                   </option>
                 ))}
               </select>
-              <label style={labelStyle}>内容（以"你"为主语，对角色说话）</label>
+              <label style={labelStyle}>{t("god.whisperContentLabel")}</label>
               <textarea
                 value={whisperContent}
                 onChange={(e) => setWhisperContent(e.target.value)}
-                placeholder="例：你隐约记起，三天前在码头见过一个熟悉的身影……"
+                placeholder={t("god.whisperPlaceholder")}
                 rows={4}
                 style={textareaStyle}
               />
               <div style={{ fontSize: 10, opacity: 0.45, marginTop: -4 }}>
-                用"你"开头，角色会以为这是自己的回忆或感知。
+                {t("god.whisperHint")}
               </div>
               <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 11, opacity: 0.7 }}>重要性</span>
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>{t("god.importanceLabel")}</span>
                   <input
                     type="range"
                     min={1}
@@ -240,21 +233,21 @@ export function GodPanel({ onClose }: { onClose: () => void }) {
                   <span style={{ fontSize: 11, minWidth: 16, textAlign: "right" }}>{whisperImportance}</span>
                 </div>
                 <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-                  <span style={{ fontSize: 11, opacity: 0.7 }}>类型</span>
+                  <span style={{ fontSize: 11, opacity: 0.7 }}>{t("god.typeLabel")}</span>
                   <select
                     value={whisperType}
                     onChange={(e) => setWhisperType(e.target.value as typeof whisperType)}
                     style={selectStyle}
                   >
-                    <option value="observation">observation（所见所闻）</option>
-                    <option value="dream">dream（梦境）</option>
-                    <option value="reflection">reflection（顿悟）</option>
-                    <option value="experience">experience（亲身经历）</option>
+                    <option value="observation">{t("god.typeObservation")}</option>
+                    <option value="dream">{t("god.typeDream")}</option>
+                    <option value="reflection">{t("god.typeReflection")}</option>
+                    <option value="experience">{t("god.typeExperience")}</option>
                   </select>
                 </div>
               </div>
               <button onClick={doWhisper} disabled={busy} style={primaryBtnStyle(busy)}>
-                {busy ? "植入中..." : "植入记忆"}
+                {busy ? t("god.implanting") : t("god.implant")}
               </button>
             </div>
           )}
@@ -336,6 +329,7 @@ const tabsStyle: CSSProperties = {
 
 const bodyStyle: CSSProperties = {
   padding: 14,
+  overflowY: "auto",
 };
 
 const sectionStyle: CSSProperties = {
@@ -377,6 +371,13 @@ const selectStyle: CSSProperties = {
   color: "#e8e8ea",
   padding: "4px 8px",
   fontSize: 12,
+};
+
+const presetDividerStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+  marginTop: 6,
 };
 
 const flashStyle: CSSProperties = {

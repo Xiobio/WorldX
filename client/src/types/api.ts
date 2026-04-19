@@ -5,7 +5,8 @@ export interface GameTime {
 
 export interface MultiDayConfig {
   enabled: boolean;
-  dayTransitionText: string;
+  endOfDayText: string;
+  newDayText: string;
   nextDayStartTime: string;
 }
 
@@ -45,6 +46,7 @@ export interface CharacterProfile {
   mbtiType: string;
   nickname: string;
   backstory?: string;
+  appearanceHint?: string;
   coreTraits: string[];
   coreMotivation: string;
   coreValues: string[];
@@ -156,3 +158,40 @@ export interface GraphData {
   edges: { source: string; target: string; label: string; strength: number }[];
   generatedAt?: GameTime | string;
 }
+
+export interface TimelineMeta {
+  id: string;
+  worldId: string;
+  createdAt: string;
+  updatedAt: string;
+  lastGameTime: GameTime;
+  tickCount: number;
+  status: "recording" | "stopped";
+}
+
+export interface TimelineWithWorld {
+  worldId: string;
+  worldName: string;
+  source?: "user" | "library";
+  isCurrent: boolean;
+  timelines: TimelineMeta[];
+}
+
+export interface TimelineInitFrame {
+  type: "init";
+  gameTime: GameTime;
+  characters: {
+    id: string;
+    name: string;
+    location: string;
+    mainAreaPointId: string | null;
+  }[];
+}
+
+export interface TimelineTickFrame {
+  type: "tick";
+  gameTime: GameTime;
+  events: SimulationEvent[];
+}
+
+export type TimelineFrame = TimelineInitFrame | TimelineTickFrame;

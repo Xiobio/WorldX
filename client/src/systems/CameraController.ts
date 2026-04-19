@@ -5,6 +5,7 @@ import type { CharacterSprite } from "../objects/CharacterSprite";
 const MIN_ZOOM = 0.12;
 const MAX_ZOOM = 3;
 const KEY_PAN_SPEED = 14;
+const CAMERA_EDGE_PADDING_PX = 160;
 
 export class CameraController {
   private scene: Phaser.Scene;
@@ -203,14 +204,16 @@ export class CameraController {
     const viewHeight = cam.height / Math.max(cam.zoom, 0.0001);
     const extraX = Math.max(0, viewWidth - this.mapWidth);
     const extraY = Math.max(0, viewHeight - this.mapHeight);
+    const paddingX = Math.min(CAMERA_EDGE_PADDING_PX, Math.max(48, this.mapWidth * 0.08));
+    const paddingY = Math.min(CAMERA_EDGE_PADDING_PX, Math.max(48, this.mapHeight * 0.08));
 
     // When the visible world area is larger than the map, expand bounds symmetrically
     // so Phaser clamps the camera to a centered presentation instead of top-left locking.
     cam.setBounds(
-      -extraX / 2,
-      -extraY / 2,
-      this.mapWidth + extraX,
-      this.mapHeight + extraY,
+      -extraX / 2 - paddingX,
+      -extraY / 2 - paddingY,
+      this.mapWidth + extraX + paddingX * 2,
+      this.mapHeight + extraY + paddingY * 2,
     );
   }
 

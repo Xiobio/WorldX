@@ -13,6 +13,7 @@ import type {
   DialogueTurnGeneration,
   GameTime,
 } from "../types/index.js";
+import { relativeTimeLabel } from "../utils/time-helpers.js";
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
@@ -45,6 +46,7 @@ export class DialogueGenerator {
         totalTurns: session.totalTurns,
         hearsayA: context.hearsayA,
         hearsayB: context.hearsayB,
+        worldSocialContext: this.worldManager.getWorldSocialContext(),
       });
 
       const result = await this.llmClient.call({
@@ -117,6 +119,7 @@ export class DialogueGenerator {
         gameTime,
         transcript: session.transcript,
         endReason: session.endReason,
+        worldSocialContext: this.worldManager.getWorldSocialContext(),
       });
 
       const result = await this.llmClient.call({
@@ -209,14 +212,12 @@ export class DialogueGenerator {
       topK: 5,
     });
 
+    const fmtMem = (m: { gameDay: number; gameTick: number; content: string }) =>
+      `- [${relativeTimeLabel(m.gameDay, m.gameTick, gameTime)}] ${m.content}`;
     const memoriesAtext =
-      memoriesA.length > 0
-        ? memoriesA.map((m) => `- ${m.content}`).join("\n")
-        : "";
+      memoriesA.length > 0 ? memoriesA.map(fmtMem).join("\n") : "";
     const memoriesBtext =
-      memoriesB.length > 0
-        ? memoriesB.map((m) => `- ${m.content}`).join("\n")
-        : "";
+      memoriesB.length > 0 ? memoriesB.map(fmtMem).join("\n") : "";
 
     const location = this.worldManager.getLocation(stateA.location);
     const locationName = location?.name ?? stateA.location;

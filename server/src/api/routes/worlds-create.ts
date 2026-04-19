@@ -12,6 +12,7 @@ router.post("/create", (req, res) => {
   const prompt = typeof req.body?.prompt === "string" ? req.body.prompt : "";
   const sizeKRaw = req.body?.sizeK;
   const sizeK = Number(sizeKRaw) as 1 | 2 | 4;
+  const keepArtifacts = req.body?.keepArtifacts === true;
 
   if (!prompt.trim()) {
     res.status(400).json({ error: "prompt is required" });
@@ -23,7 +24,7 @@ router.post("/create", (req, res) => {
   }
 
   try {
-    const { jobId } = createJobManager.startJob({ prompt, sizeK });
+    const { jobId } = createJobManager.startJob({ prompt, sizeK, keepArtifacts });
     res.json({ ok: true, jobId });
   } catch (err) {
     if (err instanceof JobConflictError) {

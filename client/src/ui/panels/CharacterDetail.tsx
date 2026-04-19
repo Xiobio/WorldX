@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "../services/api-client";
 import type {
   CharacterDetail as CharDetailType,
@@ -95,6 +96,7 @@ export function CharacterDetail({
   const [editDraft, setEditDraft] = useState<Record<string, string>>({});
   const [editBusy, setEditBusy] = useState(false);
   const [editFlash, setEditFlash] = useState<string | null>(null);
+  const { t } = useTranslation();
 
   if (!detail) return null;
 
@@ -130,20 +132,20 @@ export function CharacterDetail({
         fears: split(editDraft.fears ?? ""),
         backstory: editDraft.backstory?.trim() || undefined,
       });
-      setEditFlash("已保存");
+      setEditFlash(t("charDetail.saved"));
       setTimeout(() => setEditFlash(null), 2000);
       setEditing(false);
       apiClient.getCharacterDetail(charId).then(setDetail).catch(console.warn);
     } catch (err) {
-      setEditFlash(`失败: ${err instanceof Error ? err.message : String(err)}`);
+      setEditFlash(t("charDetail.saveFailed", { error: err instanceof Error ? err.message : String(err) }));
     } finally {
       setEditBusy(false);
     }
   };
 
   return (
-    <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10, marginBottom: 12 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexShrink: 0 }}>
         <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>
           {profile.name}
         </span>
@@ -162,20 +164,20 @@ export function CharacterDetail({
             fontSize: 11,
           }}
         >
-          {isFollowing ? "取消跟随" : "跟随"}
+          {isFollowing ? t("charDetail.unfollow") : t("charDetail.follow")}
         </button>
-        <button onClick={openEditor} style={editBtnStyle}>✏️ 改人设</button>
+        <button onClick={openEditor} style={editBtnStyle}>{t("charDetail.editProfile")}</button>
       </div>
 
-      <div style={{ fontSize: 11, color: "#aaa", marginBottom: 8, lineHeight: 1.6 }}>
+      <div style={{ fontSize: 11, color: "#aaa", marginBottom: 8, lineHeight: 1.6, flexShrink: 0 }}>
         <div>
-          位置: {locationNames[state.location] || state.location} · 情绪: {emotionLabel}
-          {state.currentAction ? ` · 行动: ${state.currentActionLabel || formatActionName(state.currentAction)}` : ""}
+          {t("charDetail.location")}: {locationNames[state.location] || state.location} · {t("charDetail.emotion")}: {emotionLabel}
+          {state.currentAction ? ` · ${t("charDetail.action")}: ${state.currentActionLabel || formatActionName(state.currentAction)}` : ""}
         </div>
       </div>
 
       {editFlash && !editing && (
-        <div style={{ fontSize: 11, color: "#8df3cf", marginBottom: 6 }}>{editFlash}</div>
+        <div style={{ fontSize: 11, color: "#8df3cf", marginBottom: 6, flexShrink: 0 }}>{editFlash}</div>
       )}
 
       {editing && (
@@ -189,28 +191,28 @@ export function CharacterDetail({
         />
       )}
 
-      <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
-        {(["history", "relations", "memory"] as Tab[]).map((t) => (
+      <div style={{ display: "flex", gap: 4, marginBottom: 8, flexShrink: 0 }}>
+        {(["history", "relations", "memory"] as Tab[]).map((tabT) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabT}
+            onClick={() => setTab(tabT)}
             style={{
               flex: 1,
-              background: tab === t ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.05)",
+              background: tab === tabT ? "rgba(255,255,255,0.15)" : "rgba(255,255,255,0.05)",
               border: "none",
-              color: tab === t ? "#fff" : "#888",
+              color: tab === tabT ? "#fff" : "#888",
               borderRadius: 4,
               padding: "4px 0",
               cursor: "pointer",
               fontSize: 11,
             }}
           >
-            {{ history: "历史", relations: "关系", memory: "记忆" }[t]}
+            {{ history: t("charDetail.tabHistory"), relations: t("charDetail.tabRelations"), memory: t("charDetail.tabMemory") }[tabT]}
           </button>
         ))}
       </div>
 
-      <div style={{ maxHeight: 320, overflow: "auto", fontSize: 11, color: "#ccc" }}>
+      <div className="custom-scrollbar" style={{ flex: 1, minHeight: 320, overflowY: "auto", fontSize: 11, color: "#ccc", paddingRight: 4 }}>
         {tab === "history" &&
           mergedHistory.map((record, i) => (
             <div
@@ -230,7 +232,7 @@ export function CharacterDetail({
                 }}
               >
                 <span style={{ color: "#666" }}>
-                  Day {record.gameDay} · {record.timeString || `T${record.gameTick}`}
+                  {t("time.day", { day: record.gameDay })} · {record.timeString || `T${record.gameTick}`}
                 </span>
                 <span style={{ color: typeColor(record.kind === "dialogue_turn" ? "dialogue" : record.event.type), fontWeight: 600 }}>
                   {formatEventType(record.kind === "dialogue_turn" ? "dialogue" : record.event.type)}
@@ -244,11 +246,11 @@ export function CharacterDetail({
                     </span>
                     <span style={{ color: "#bbb" }}>
                       {" "}
-                      对{" "}
+                      {t("charDetail.saidTo")}{" "}
                       {record.listenerId
                         ? characterNames[record.listenerId] || record.listenerId
-                        : "对方"}{" "}
-                      说：
+                        : t("charDetail.theOther")}{" "}
+                      {t("charDetail.said")}
                     </span>
                   </div>
                   <div
@@ -264,7 +266,7 @@ export function CharacterDetail({
                     {record.content}
                   </div>
                   {record.innerMonologue && (
-                    <div style={{ marginTop: 4, padding: "4px 8px", background: "rgba(255,255,255,0.05)", borderRadius: 6, fontStyle: "italic", color: "#b2bec3" }}>
+                    <div title={t("charDetail.innerMonologueTitle")} style={{ marginTop: 4, padding: "4px 8px", background: "rgba(255,255,255,0.05)", borderRadius: 6, fontStyle: "italic", color: "#b2bec3" }}>
                       💭 {record.innerMonologue}
                     </div>
                   )}
@@ -275,7 +277,7 @@ export function CharacterDetail({
                     {formatEventSummary(record.event, { characterNames, locationNames })}
                   </div>
                   {record.event.innerMonologue && (
-                    <div style={{ marginTop: 4, padding: "4px 8px", background: "rgba(255,255,255,0.05)", borderRadius: 6, fontStyle: "italic", color: "#b2bec3" }}>
+                    <div title={t("charDetail.innerMonologueTitle")} style={{ marginTop: 4, padding: "4px 8px", background: "rgba(255,255,255,0.05)", borderRadius: 6, fontStyle: "italic", color: "#b2bec3" }}>
                       💭 {record.event.innerMonologue}
                     </div>
                   )}
@@ -286,19 +288,19 @@ export function CharacterDetail({
         {tab === "relations" &&
           relations.map((r, i) => (
             <div key={i} style={{ padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {r.targetName || r.targetId}: {r.label} ({relationStrength(r)}%)
+              {r.targetName || r.targetId}: {t(`relationLabel.${r.label}`, { defaultValue: r.label })} ({relationStrength(r)}%)
             </div>
           ))}
         {tab === "memory" &&
           memories.map((m, i) => (
             <div key={i} style={{ padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              <span style={{ color: "#888" }}>[{m.type}]</span> {m.content}
+              <span style={{ color: "#888" }}>[{t(`memoryType.${m.type}`, { defaultValue: m.type })}]</span> {m.content}
             </div>
           ))}
         {((tab === "history" && mergedHistory.length === 0) ||
           (tab === "relations" && relations.length === 0) ||
           (tab === "memory" && memories.length === 0)) && (
-          <div style={{ color: "#666", padding: 8, textAlign: "center" }}>暂无数据</div>
+          <div style={{ color: "#666", padding: 8, textAlign: "center" }}>{t("charDetail.noData")}</div>
         )}
       </div>
     </div>
@@ -432,13 +434,13 @@ function typeColor(type: string): string {
 
 /* ── Profile Editor ── */
 
-const PROFILE_FIELDS: { key: string; label: string; multiline?: boolean }[] = [
-  { key: "coreTraits", label: "核心特质（逗号分隔）" },
-  { key: "coreMotivation", label: "核心动机" },
-  { key: "coreValues", label: "核心价值观（逗号分隔）" },
-  { key: "speakingStyle", label: "说话风格" },
-  { key: "fears", label: "恐惧（逗号分隔）" },
-  { key: "backstory", label: "背景故事", multiline: true },
+const PROFILE_FIELD_KEYS: { key: string; labelKey: string; multiline?: boolean }[] = [
+  { key: "coreTraits", labelKey: "charDetail.fieldCoreTraits" },
+  { key: "coreMotivation", labelKey: "charDetail.fieldCoreMotivation" },
+  { key: "coreValues", labelKey: "charDetail.fieldCoreValues" },
+  { key: "speakingStyle", labelKey: "charDetail.fieldSpeakingStyle" },
+  { key: "fears", labelKey: "charDetail.fieldFears" },
+  { key: "backstory", labelKey: "charDetail.fieldBackstory", multiline: true },
 ];
 
 function ProfileEditor({
@@ -456,14 +458,15 @@ function ProfileEditor({
   busy: boolean;
   flash: string | null;
 }) {
+  const { t } = useTranslation();
   const set = (key: string, val: string) => onChange({ ...draft, [key]: val });
 
   return (
     <div style={editorWrapStyle}>
-      {PROFILE_FIELDS.map((f) =>
+      {PROFILE_FIELD_KEYS.map((f) =>
         f.multiline ? (
           <label key={f.key} style={fieldLabelStyle}>
-            {f.label}
+            {t(f.labelKey)}
             <textarea
               value={draft[f.key] ?? ""}
               onChange={(e) => set(f.key, e.target.value)}
@@ -473,7 +476,7 @@ function ProfileEditor({
           </label>
         ) : (
           <label key={f.key} style={fieldLabelStyle}>
-            {f.label}
+            {t(f.labelKey)}
             <input
               value={draft[f.key] ?? ""}
               onChange={(e) => set(f.key, e.target.value)}
@@ -484,10 +487,10 @@ function ProfileEditor({
       )}
       <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
         <button onClick={onSave} disabled={busy} style={saveBtnStyle(busy)}>
-          {busy ? "保存中…" : "保存"}
+          {busy ? t("charDetail.saving") : t("charDetail.save")}
         </button>
-        <button onClick={onCancel} disabled={busy} style={cancelBtnStyle}>取消</button>
-        {flash && <span style={{ fontSize: 11, color: flash.startsWith("失败") ? "#ffb0b0" : "#8df3cf" }}>{flash}</span>}
+        <button onClick={onCancel} disabled={busy} style={cancelBtnStyle}>{t("charDetail.cancel")}</button>
+        {flash && <span style={{ fontSize: 11, color: flash !== t("charDetail.saved") ? "#ffb0b0" : "#8df3cf" }}>{flash}</span>}
       </div>
     </div>
   );

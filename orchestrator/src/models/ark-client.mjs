@@ -1,6 +1,6 @@
 /**
  * Volcengine Ark (ark-code-latest) client — OpenAI-compatible chat completions.
- * Same behavior as generators/map; loads env from world-seed root.
+ * Same behavior as generators/map; loads env from worldx root.
  */
 
 import dotenv from "dotenv";
@@ -40,7 +40,7 @@ function logError(step, error) {
   console.error(`[${step}]`, error);
 }
 
-export async function arkChat(messages, { temperature = 0.3, logStep = "ark", requestTimeoutMs, responseFormatType } = {}) {
+export async function arkChat(messages, { temperature = 0.3, logStep = "ark", requestTimeoutMs, responseFormatType, maxTokens } = {}) {
   const BASE_URL = process.env.ARK_BASE_URL || DEFAULT_BASE_URL;
   const API_KEY = process.env.ARK_API_KEY || "";
   const MODEL = process.env.ARK_MODEL || DEFAULT_MODEL;
@@ -58,6 +58,9 @@ export async function arkChat(messages, { temperature = 0.3, logStep = "ark", re
       messages,
       temperature,
     };
+    if (maxTokens != null) {
+      body.max_tokens = maxTokens;
+    }
     if (responseFormatType) {
       body.response_format = { type: responseFormatType };
     }
@@ -146,6 +149,7 @@ export async function arkChatJSON(arg, maybeOpts = {}) {
       try {
         const raw = await arkChat(messages, {
           ...opts,
+          maxTokens: opts.maxTokens,
           responseFormatType:
             mode === STRUCTURED_OUTPUT_MODES.JSON_OBJECT ? "json_object" : undefined,
         });

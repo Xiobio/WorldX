@@ -1,44 +1,60 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { useTranslation } from "react-i18next";
+
+export type TransitionPhase = "hidden" | "ending" | "starting" | "fade-out";
 
 export function SceneTransition({
   day,
-  visible,
+  phase,
   title,
   timeString,
   periodLabel,
   variant = "open",
+  onCovered,
   onComplete,
 }: {
   day: number;
-  visible: boolean;
+  phase: TransitionPhase;
   title?: string;
   timeString?: string;
   periodLabel?: string;
   variant?: "open" | "closed";
+  onCovered?: () => void;
   onComplete?: () => void;
 }) {
   const [opacity, setOpacity] = useState(0);
   const [contentOffset, setContentOffset] = useState(20);
+  const { t } = useTranslation();
+
+  const onCoveredRef = useRef(onCovered);
+  const onCompleteRef = useRef(onComplete);
 
   useEffect(() => {
-    if (!visible) {
+    onCoveredRef.current = onCovered;
+    onCompleteRef.current = onComplete;
+  }, [onCovered, onComplete]);
+
+  useEffect(() => {
+    if (phase === "hidden") {
       setOpacity(0);
       setContentOffset(20);
-      return;
-    }
-
-    setOpacity(1);
-    setContentOffset(0);
-    const timer = setTimeout(() => {
+    } else if (phase === "ending") {
+      setOpacity(1);
+      setContentOffset(0);
+      const coveredTimer = setTimeout(() => onCoveredRef.current?.(), 400);
+      return () => clearTimeout(coveredTimer);
+    } else if (phase === "starting") {
+      setOpacity(1);
+      setContentOffset(0);
+    } else if (phase === "fade-out") {
       setOpacity(0);
       setContentOffset(-10);
-      const fadeTimer = setTimeout(() => onComplete?.(), 1500);
+      const fadeTimer = setTimeout(() => onCompleteRef.current?.(), 1500);
       return () => clearTimeout(fadeTimer);
-    }, 3000);
-    return () => clearTimeout(timer);
-  }, [visible, day, onComplete]);
+    }
+  }, [phase, day]);
 
-  if (!visible && opacity === 0) return null;
+  if (phase === "hidden" && opacity === 0) return null;
 
   return (
     <div
@@ -55,9 +71,11 @@ export function SceneTransition({
             ? "radial-gradient(circle at 50% 35%, rgba(72,112,180,0.2), rgba(8,10,18,0.96) 58%, rgba(4,6,12,0.98))"
             : "rgba(10, 10, 20, 0.95)",
         opacity,
-        transition: "opacity 1.5s ease-in-out",
-        pointerEvents: visible ? "auto" : "none",
+        transition: opacity === 1 ? "opacity 0.4s ease-out" : "opacity 1.5s ease-in-out",
+        pointerEvents: phase !== "hidden" ? "auto" : "none",
         overflow: "hidden",
+        willChange: "opacity",
+        transform: "translateZ(0)",
       }}
     >
       <div
@@ -83,7 +101,7 @@ export function SceneTransition({
               ? "linear-gradient(90deg, transparent, rgba(196,223,255,0.18), rgba(138,188,255,0.26), rgba(196,223,255,0.18), transparent)"
               : "linear-gradient(90deg, transparent, rgba(156,201,255,0.12), transparent)",
           filter: "blur(30px)",
-          opacity: opacity * 0.9,
+          opacity: 0.9,
         }}
       />
       <div
@@ -96,37 +114,46 @@ export function SceneTransition({
           alignItems: "center",
           padding: "32px 40px",
           borderRadius: 24,
+          WebkitBackdropFilter: "blur(6px)",
           backdropFilter: "blur(6px)",
-          background: "rgba(10, 14, 24, 0.18)",
-          border: "1px solid rgba(255,255,255,0.06)",
-          boxShadow: "0 18px 60px rgba(0,0,0,0.28)",
+          background:
+            "linear-gradient(180deg, rgba(44, 60, 92, 0.34), rgba(18, 24, 38, 0.32))",
+          border: "1px solid rgba(255,255,255,0.09)",
+          boxShadow:
+            "0 18px 60px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05)",
+          isolation: "isolate",
+          willChange: "transform, opacity",
         }}
       >
         <div
           style={{
-            fontSize: 20,
-            fontWeight: 500,
-            color: "#9cc9ff",
-            letterSpacing: 6,
-            marginBottom: 18,
-            textAlign: "center",
-          }}
-        >
-          {title || "新的一段时间开始了"}
-        </div>
-        <div
-          style={{
-            fontSize: 48,
-            fontWeight: 300,
-            color: "#e0e0e0",
+            fontSize: phase === "ending" ? 28 : 20,
+            fontWeight: phase === "ending" ? 400 : 500,
+            color: phase === "ending" ? "#e0e0e0" : "#9cc9ff",
             letterSpacing: 4,
             marginBottom: 18,
             textAlign: "center",
+            maxWidth: "80%",
+            lineHeight: 1.5,
           }}
         >
-          第 {day} 天
+          {title || t("sceneTransition.defaultTitle")}
         </div>
-        {(timeString || periodLabel) && (
+        {phase !== "ending" && (
+          <div
+            style={{
+              fontSize: 48,
+              fontWeight: 300,
+              color: "#e0e0e0",
+              letterSpacing: 4,
+              marginBottom: 18,
+              textAlign: "center",
+            }}
+          >
+            {t("sceneTransition.dayLabel", { day })}
+          </div>
+        )}
+        {phase !== "ending" && (timeString || periodLabel) && (
           <div
             style={{
               color: "rgba(224, 224, 224, 0.78)",

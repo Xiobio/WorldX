@@ -6,7 +6,10 @@ import { buildSceneRuntimeInfo, buildWorldTimeInfo } from "../../utils/time-help
 import * as worldStateStore from "../../store/world-state-store.js";
 import {
   GENERATED_WORLDS_DIR,
+  LIBRARY_WORLDS_DIR,
   listGeneratedWorlds,
+  listLibraryWorlds,
+  findWorldById,
 } from "../../utils/world-directories.js";
 
 const router = Router();
@@ -30,6 +33,7 @@ router.get("/info", (_req, res) => {
     worldName: wm.getWorldName(),
     worldDescription: wm.getWorldDescription(),
     currentWorldId: currentWorldDir ? path.basename(currentWorldDir) : null,
+    currentTimelineId: appContext.timelineManager.getCurrentTimelineId(),
     sceneConfig: wm.getSceneConfig(),
     sceneRuntime: buildSceneRuntimeInfo(wm.getSceneConfig()),
     worldActions: wm.getWorldActions(),
@@ -65,13 +69,19 @@ router.get("/worlds", (_req, res) => {
   const currentWorldDir = appContext.getWorldDir();
   const currentWorldId = currentWorldDir ? path.basename(currentWorldDir) : null;
 
+  const mapWorld = (world: { id: string; worldName: string; dir: string; source: string }) => ({
+    id: world.id,
+    worldName: world.worldName,
+    source: world.source,
+    isCurrent: world.id === currentWorldId,
+    timelineCount: appContext.timelineManager.listTimelines(world.dir).length,
+  });
+
   res.json({
     currentWorldId,
-    worlds: listGeneratedWorlds().map((world) => ({
-      id: world.id,
-      worldName: world.worldName,
-      isCurrent: world.id === currentWorldId,
-    })),
+    currentTimelineId: appContext.timelineManager.getCurrentTimelineId(),
+    worlds: listGeneratedWorlds().map(mapWorld),
+    libraryWorlds: listLibraryWorlds().map(mapWorld),
   });
 });
 
@@ -82,7 +92,7 @@ router.post("/select", (req, res) => {
     return;
   }
 
-  const world = listGeneratedWorlds().find((entry) => entry.id === worldId);
+  const world = findWorldById(worldId);
   if (!world) {
     res.status(404).json({ error: "World not found" });
     return;
@@ -103,9 +113,14 @@ router.delete("/worlds/:worldId", (req, res) => {
     return;
   }
 
-  const world = listGeneratedWorlds().find((entry) => entry.id === worldId);
+  const world = findWorldById(worldId);
   if (!world) {
     res.status(404).json({ error: "World not found" });
+    return;
+  }
+
+  if (world.source === "library") {
+    res.status(403).json({ error: "Sample worlds cannot be deleted" });
     return;
   }
 

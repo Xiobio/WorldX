@@ -24,6 +24,9 @@ const MAIN_AREA_DIALOGUE_DISTANCE_RATIO = clampRatio(
 );
 const MIN_PREFERRED_MAIN_AREA_COMPONENT_SIZE = 6;
 const MIN_PREFERRED_MAIN_AREA_COMPONENT_RATIO = 0.5;
+const MAIN_AREA_SPAWN_EDGE_PADDING_TILE_MULTIPLIER = 3;
+const MAIN_AREA_SPAWN_EDGE_PADDING_RATIO = 0.03;
+const MAIN_AREA_SPAWN_INTERIOR_POOL_RATIO = 0.5;
 
 export interface TickAdvanceResult {
   previousTime: GameTime;
@@ -41,6 +44,8 @@ export class WorldManager {
   private sceneConfig!: SceneConfig;
   private worldName = "unknown";
   private worldDescription = "";
+  private worldSocialContext = "";
+  private contentLanguage: "zh" | "en" = "zh";
 
   constructor() {}
 
@@ -60,6 +65,11 @@ export class WorldManager {
     this.worldActions = config.worldActions ?? [];
     this.worldName = config.worldName ?? "unknown";
     this.worldDescription = config.worldDescription ?? "";
+    this.worldSocialContext = buildWorldSocialContext(
+      config.worldSocialContext,
+      this.worldDescription,
+    );
+    this.contentLanguage = config.contentLanguage ?? "zh";
     this.sceneConfig = loadSceneConfig();
 
     worldState.initWorldState(this.locationConfigs);
@@ -73,6 +83,14 @@ export class WorldManager {
 
   getWorldDescription(): string {
     return this.worldDescription;
+  }
+
+  getWorldSocialContext(): string {
+    return this.worldSocialContext;
+  }
+
+  getContentLanguage(): "zh" | "en" {
+    return this.contentLanguage;
   }
 
   getSceneConfig(): SceneConfig {
@@ -200,7 +218,7 @@ export class WorldManager {
 
   getInitialMainAreaPointId(seed: string): string | null {
     if (!this.hasMainAreaPointGraph()) return null;
-    const points = this.getPreferredSpawnMainAreaPoints();
+    const points = this.getSpawnCandidateMainAreaPoints(this.getPreferredSpawnMainAreaPoints());
     const index = Math.abs(hashString(seed)) % points.length;
     return points[index]?.id ?? null;
   }
@@ -214,30 +232,18 @@ export class WorldManager {
     const points = this.getPreferredSpawnMainAreaPoints();
     if (points.length === 0) return null;
 
+    const edgeSafePoints = this.getSpawnCandidateMainAreaPoints(points);
     const free = points.filter((p) => !occupied.has(p.id));
+    const edgeSafeFree = edgeSafePoints.filter((p) => !occupied.has(p.id));
     if (free.length === 0) {
-      const index = Math.abs(hashString(seed)) % points.length;
-      return points[index]?.id ?? null;
-    }
-    if (occupied.size === 0) {
-      const index = Math.abs(hashString(seed)) % free.length;
-      return free[index]?.id ?? null;
+      const fallbackPool = edgeSafePoints.length > 0 ? edgeSafePoints : points;
+      const index = Math.abs(hashString(seed)) % fallbackPool.length;
+      return fallbackPool[index]?.id ?? null;
     }
 
-    const occupiedPoints = points.filter((point) => occupied.has(point.id));
-    if (occupiedPoints.length === 0) {
-      const index = Math.abs(hashString(seed)) % free.length;
-      return free[index]?.id ?? null;
-    }
-
-    const ranked = [...free].sort((a, b) => {
-      const minDistA = Math.min(...occupiedPoints.map((occupiedPoint) => distanceBetweenPoints(a, occupiedPoint)));
-      const minDistB = Math.min(...occupiedPoints.map((occupiedPoint) => distanceBetweenPoints(b, occupiedPoint)));
-      return minDistB - minDistA;
-    });
-    const preferredPool = ranked.slice(0, Math.max(1, Math.ceil(ranked.length * 0.4)));
+    const preferredPool = edgeSafeFree.length > 0 ? edgeSafeFree : free;
     const index = Math.abs(hashString(seed)) % preferredPool.length;
-    return preferredPool[index]?.id ?? ranked[0]?.id ?? null;
+    return preferredPool[index]?.id ?? null;
   }
 
   pickDistantMainAreaPointId(currentPointId: string | null | undefined, seed: string): string | null {
@@ -328,6 +334,53 @@ export class WorldManager {
     }
     const filtered = this.mainAreaPoints.filter((point) => this.preferredMainAreaPointIds?.has(point.id));
     return filtered.length > 0 ? filtered : this.mainAreaPoints;
+  }
+
+  private getSpawnCandidateMainAreaPoints(points: MainAreaPointConfig[]): MainAreaPointConfig[] {
+    if (points.length <= 1) return points;
+    if (!this.worldSize) return points;
+
+    const edgePadding = this.getMainAreaSpawnEdgePaddingPx();
+    const edgeSafe = edgePadding > 0
+      ? points.filter(
+          (point) =>
+            point.x >= edgePadding &&
+            point.x <= this.worldSize!.width - edgePadding &&
+            point.y >= edgePadding &&
+            point.y <= this.worldSize!.height - edgePadding,
+        )
+      : points;
+    const candidatePool = edgeSafe.length > 0 ? edgeSafe : points;
+    if (candidatePool.length <= 2) return candidatePool;
+
+    const ranked = [...candidatePool].sort(
+      (a, b) => this.getMainAreaPointInteriorScore(b) - this.getMainAreaPointInteriorScore(a),
+    );
+    const preferredCount = Math.max(
+      1,
+      Math.ceil(ranked.length * MAIN_AREA_SPAWN_INTERIOR_POOL_RATIO),
+    );
+    return ranked.slice(0, preferredCount);
+  }
+
+  private getMainAreaSpawnEdgePaddingPx(): number {
+    if (!this.worldSize) return 0;
+    const tileSize = this.worldSize.tileSize && Number.isFinite(this.worldSize.tileSize)
+      ? this.worldSize.tileSize
+      : 32;
+    const proportionalPadding =
+      Math.min(this.worldSize.width, this.worldSize.height) * MAIN_AREA_SPAWN_EDGE_PADDING_RATIO;
+    return Math.max(tileSize * MAIN_AREA_SPAWN_EDGE_PADDING_TILE_MULTIPLIER, proportionalPadding);
+  }
+
+  private getMainAreaPointInteriorScore(point: MainAreaPointConfig): number {
+    if (!this.worldSize) return 0;
+    return Math.min(
+      point.x,
+      this.worldSize.width - point.x,
+      point.y,
+      this.worldSize.height - point.y,
+    );
   }
 
   getWorldAction(actionId: string): WorldActionConfig | undefined {
@@ -715,4 +768,15 @@ function getLargestMainAreaPointComponent(points: MainAreaPointConfig[]): Set<st
 function clampRatio(value: number): number {
   if (!Number.isFinite(value)) return 0.2;
   return Math.max(0.02, Math.min(0.5, value));
+}
+
+function buildWorldSocialContext(
+  socialContext?: string,
+  worldDescription?: string,
+): string {
+  const trimmedContext = typeof socialContext === "string" ? socialContext.trim() : "";
+  if (trimmedContext) return trimmedContext;
+  const trimmedDescription = typeof worldDescription === "string" ? worldDescription.trim() : "";
+  if (trimmedDescription) return trimmedDescription;
+  return "这是一个有自身日常秩序的小世界。让背景只作为处事底色，别机械复述设定。";
 }

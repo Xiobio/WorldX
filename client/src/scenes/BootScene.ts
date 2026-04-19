@@ -23,7 +23,7 @@ export class BootScene extends Phaser.Scene {
     const w = this.cameras.main.width;
     const h = this.cameras.main.height;
 
-    this.add.text(w / 2, h / 2 - 20, "WorldSpark", {
+    this.add.text(w / 2, h / 2 - 20, "WorldX", {
       fontSize: "24px",
       color: "#e0e0e0",
       fontFamily: "Arial",

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "../services/api-client";
 import type {
   CharacterInfo,
@@ -32,6 +33,7 @@ export function DialoguePanel({
   ticksPerScene: number;
   onDismiss: (conversationId: string) => void;
 }) {
+  const { t } = useTranslation();
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
@@ -174,14 +176,14 @@ export function DialoguePanel({
           cursor: "pointer",
           pointerEvents: "auto",
         }}
-        title={collapsed ? "展开近期对话" : "收起近期对话"}
+        title={collapsed ? t("dialogue.expandTitle") : t("dialogue.collapseTitle")}
       >
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ color: "#74b9ff", fontSize: 14, fontWeight: 700, display: "flex", alignItems: "center", gap: 8 }}>
-            近期对话
+            {t("dialogue.recentTitle")}
             {collapsed && (
               <span style={{ color: "#888", fontSize: 11, fontWeight: "normal" }}>
-                {getSessionLabel(summarySession)}{summarySession.isFinal ? " · 已结束" : " · 进行中"}
+                {getSessionLabel(summarySession)}{summarySession.isFinal ? " · " + t("dialogue.ended") : " · " + t("dialogue.ongoing")}
               </span>
             )}
           </div>
@@ -189,13 +191,13 @@ export function DialoguePanel({
             <div style={{ color: "#888", fontSize: 11, marginTop: 2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
               {summarySession.turns.length > 0
                 ? `${characterNames[summarySession.turns[summarySession.turns.length - 1].speaker] || summarySession.turns[summarySession.turns.length - 1].speaker}: ${summarySession.turns[summarySession.turns.length - 1].content}`
-                : "（暂无内容）"}
+                : t("dialogue.noContent")}
             </div>
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <span style={{ color: "#888", fontSize: 11 }}>
-            {visibleSessions.length} 组
+            {t("dialogue.sessionCount", { count: visibleSessions.length })}
           </span>
           <div
             style={{
@@ -307,7 +309,7 @@ export function DialoguePanel({
                 {getSessionLabel(current)}
               </div>
               <div style={{ color: "#888", fontSize: 11, marginTop: 2 }}>
-                {current.isFinal ? "最近一轮已结束" : "最近一轮进行中"}
+                {current.isFinal ? t("dialogue.latestEnded") : t("dialogue.latestOngoing")}
               </div>
             </div>
             <button
@@ -362,9 +364,9 @@ export function DialoguePanel({
                       borderLeft: "2px dashed rgba(179, 157, 219, 0.45)",
                       opacity: 0.88,
                     }}
-                    title="内心 OS"
+                    title={t("dialogue.innerMonologueTitle")}
                   >
-                    …（心里想）{turn.innerMonologue}
+                    💭 {turn.innerMonologue}
                   </div>
                 )}
               </div>

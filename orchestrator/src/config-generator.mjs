@@ -50,6 +50,8 @@ export function generateConfigs(worldDesign, worldDir) {
   const worldConfig = {
     worldName: normalizedDesign.worldName,
     worldDescription: normalizedDesign.worldDescription,
+    worldSocialContext: normalizedDesign.worldSocialContext || normalizedDesign.worldDescription,
+    contentLanguage: normalizedDesign.contentLanguage || undefined,
     scene: {
       sceneType: normalizedDesign.sceneType,
       startTime: normalizedDesign.timeConfig.startTime,
@@ -66,6 +68,7 @@ export function generateConfigs(worldDesign, worldDir) {
     metadata: {
       worldName: normalizedDesign.worldName,
       worldDescription: normalizedDesign.worldDescription,
+      worldSocialContext: normalizedDesign.worldSocialContext || normalizedDesign.worldDescription,
       sceneType: normalizedDesign.sceneType,
       timeConfig: normalizedDesign.timeConfig,
       multiDay: normalizedDesign.multiDay,
@@ -137,6 +140,8 @@ export function generateConfigs(worldDesign, worldDir) {
       name: charDesign.name,
       role: charDesign.role,
       personality: charDesign.personality,
+      appearanceHint:
+        typeof charDesign.appearanceHint === "string" ? charDesign.appearanceHint : "",
       motivation: charDesign.motivation,
       socialStyle: charDesign.socialStyle,
       traits: extractTraits(charDesign.personality),

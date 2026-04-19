@@ -1,7 +1,8 @@
 {
-  "name": "world-seed",
+  "name": "worldx",
   "version": "0.1.0",
   "private": true,
+  "repository": "git@github.com:YGYOOO/WorldX.git",
   "type": "module",
   "scripts": {
     "create": "node orchestrator/src/index.mjs",

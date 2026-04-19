@@ -6,6 +6,7 @@ import {
   useState,
 } from "react";
 import type { CSSProperties } from "react";
+import { useTranslation } from "react-i18next";
 import {
   apiClient,
   JobConflictError,
@@ -13,41 +14,12 @@ import {
   type CreateJobPhase,
   type CreateJobSizeK,
   type CreateJobSnapshot,
+  type GeneratedWorldSummary,
 } from "../services/api-client";
 import { CreateWorldBackground } from "./CreateWorldBackground";
+import { LanguageToggle } from "../components/LanguageToggle";
 
 type Mode = "input" | "running" | "done" | "error";
-
-interface PhaseInfo {
-  phase: CreateJobPhase;
-  title: string;
-  hint: string;
-}
-
-const PHASES: PhaseInfo[] = [
-  { phase: 1, title: "Designing world", hint: "LLM is dreaming up regions, characters and lore." },
-  { phase: 2, title: "Painting the map", hint: "Image model paints the world; vision model annotates it." },
-  { phase: 3, title: "Casting characters", hint: "Sprite sheets are generated and cleaned up." },
-  { phase: 4, title: "Wiring simulation", hint: "Configs, navigation points and runtime are assembled." },
-];
-
-const PHASE_DESCRIPTIONS: Record<CreateJobPhase, string> = {
-  1: "Designing world",
-  2: "Painting the map",
-  3: "Casting characters",
-  4: "Wiring simulation",
-};
-
-const SIZE_OPTIONS: Array<{
-  value: CreateJobSizeK;
-  label: string;
-  detail: string;
-  estimate: string;
-}> = [
-  { value: 1, label: "1K", detail: "Quick draft", estimate: "~3–5 min" },
-  { value: 2, label: "2K", detail: "Balanced (recommended)", estimate: "~6–10 min" },
-  { value: 4, label: "4K", detail: "Cinematic detail", estimate: "~12–20 min" },
-];
 
 const PROMPT_EXAMPLES = [
   "宋朝繁华夜市，有算命先生、卖艺人、小偷、女侠、书生、酒鬼。",
@@ -60,6 +32,11 @@ export function CreateWorldPage({
 }: {
   hasExistingWorlds: boolean;
 }) {
+  const { t } = useTranslation();
+  const keepArtifacts = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return new URLSearchParams(window.location.search).get("dev") === "1";
+  }, []);
   const [mode, setMode] = useState<Mode>("input");
   const [prompt, setPrompt] = useState("");
   const [sizeK, setSizeK] = useState<CreateJobSizeK>(2);
@@ -71,7 +48,32 @@ export function CreateWorldPage({
   const [logsOpen, setLogsOpen] = useState(false);
   const [conflictJobId, setConflictJobId] = useState<string | null>(null);
   const [cancelingJob, setCancelingJob] = useState(false);
+  const [libraryWorlds, setLibraryWorlds] = useState<GeneratedWorldSummary[]>([]);
+  const [loadingSampleWorld, setLoadingSampleWorld] = useState<string | null>(null);
   const logBoxRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (hasExistingWorlds) return;
+    let cancelled = false;
+    apiClient.getGeneratedWorlds()
+      .then((res) => {
+        if (cancelled) return;
+        setLibraryWorlds(res.libraryWorlds ?? []);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [hasExistingWorlds]);
+
+  const onLoadSampleWorld = useCallback(async (worldId: string) => {
+    setLoadingSampleWorld(worldId);
+    try {
+      await apiClient.switchWorld(worldId);
+      window.location.assign("/");
+    } catch (err) {
+      console.warn("[CreateWorldPage] Failed to load sample world:", err);
+      setLoadingSampleWorld(null);
+    }
+  }, []);
 
   // On mount: if a job is already running, attach to it (covers refresh during generation).
   useEffect(() => {
@@ -138,7 +140,7 @@ export function CreateWorldPage({
         if (cancelled) return;
         console.warn("[CreateWorldPage] Failed to switch to new world:", err);
         setSubmitError(
-          `World was generated but switching failed: ${err instanceof Error ? err.message : String(err)}`,
+          t("create.switchFailed", { error: err instanceof Error ? err.message : String(err) }),
         );
       }
     })();
@@ -149,7 +151,7 @@ export function CreateWorldPage({
 
   const onSubmit = useCallback(async () => {
     if (!prompt.trim()) {
-      setSubmitError("Please describe the world you want to create.");
+      setSubmitError(t("create.emptyError"));
       return;
     }
     setSubmitting(true);
@@ -157,23 +159,25 @@ export function CreateWorldPage({
     setEvents([]);
     setSnapshot(null);
     try {
-      const { jobId: id } = await apiClient.createWorld({ prompt: prompt.trim(), sizeK });
+      const { jobId: id } = await apiClient.createWorld({
+        prompt: prompt.trim(),
+        sizeK,
+        keepArtifacts,
+      });
       setJobId(id);
       setCancelingJob(false);
       setMode("running");
     } catch (err) {
       if (err instanceof JobConflictError) {
         setConflictJobId(err.activeJobId);
-        setSubmitError(
-          "A world is already being generated. You can attach to the running job to follow its progress.",
-        );
+        setSubmitError(t("create.conflictError"));
       } else {
         setSubmitError(err instanceof Error ? err.message : String(err));
       }
     } finally {
       setSubmitting(false);
     }
-  }, [prompt, sizeK]);
+  }, [prompt, sizeK, keepArtifacts]);
 
   const onAttachToConflict = useCallback(() => {
     if (!conflictJobId) return;
@@ -214,13 +218,16 @@ export function CreateWorldPage({
         <header style={headerStyle}>
           <div style={brandStyle}>
             <span style={brandMarkStyle}>✦</span>
-            <span style={brandNameStyle}>WorldSpark</span>
+            <span style={brandNameStyle}>{t("create.brand")}</span>
           </div>
-          {hasExistingWorlds && mode === "input" && (
-            <button onClick={() => window.location.assign("/")} style={ghostBtnStyle}>
-              ← Back to current world
-            </button>
-          )}
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <LanguageToggle />
+            {hasExistingWorlds && mode === "input" && (
+              <button onClick={() => window.location.assign("/")} style={ghostBtnStyle}>
+                {t("create.backToWorld")}
+              </button>
+            )}
+          </div>
         </header>
 
         {mode === "input" && (
@@ -234,6 +241,9 @@ export function CreateWorldPage({
             conflictJobId={conflictJobId}
             onSubmit={onSubmit}
             onAttachToConflict={onAttachToConflict}
+            libraryWorlds={!hasExistingWorlds ? libraryWorlds : []}
+            loadingSampleWorld={loadingSampleWorld}
+            onLoadSampleWorld={onLoadSampleWorld}
           />
         )}
 
@@ -266,6 +276,9 @@ function InputView({
   conflictJobId,
   onSubmit,
   onAttachToConflict,
+  libraryWorlds,
+  loadingSampleWorld,
+  onLoadSampleWorld,
 }: {
   prompt: string;
   setPrompt: (value: string) => void;
@@ -276,40 +289,55 @@ function InputView({
   conflictJobId: string | null;
   onSubmit: () => void;
   onAttachToConflict: () => void;
+  libraryWorlds: GeneratedWorldSummary[];
+  loadingSampleWorld: string | null;
+  onLoadSampleWorld: (worldId: string) => void;
 }) {
+  const { t } = useTranslation();
+
+  const SIZE_OPTIONS: Array<{
+    value: CreateJobSizeK;
+    label: string;
+    estimate: string;
+  }> = [
+    { value: 1, label: "1K", estimate: "~30–110k tokens" },
+    { value: 2, label: "2K", estimate: "~40–130k tokens" },
+    { value: 4, label: "4K", estimate: "~50–160k tokens" },
+  ];
+
   return (
     <div style={cardStyle}>
-      <h1 style={taglineStyle}>One sentence. One living world.</h1>
-      <p style={subTaglineStyle}>
-        Describe the world you want to live inside. WorldSpark will design the map,
-        cast the characters, and bring everything to life.
-      </p>
+      <h1 style={taglineStyle}>{t("create.tagline")}</h1>
+      <p style={subTaglineStyle}>{t("create.subtitle")}</p>
 
-      <label style={labelStyle}>What kind of world?</label>
+      <label style={labelStyle}>{t("create.promptLabel")}</label>
       <textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
-        placeholder="A cozy mountain village in autumn, with a blacksmith, a tea house owner, a wandering monk and a curious child..."
+        placeholder={t("create.promptPlaceholder")}
         style={textareaStyle}
         rows={5}
         spellCheck={false}
       />
       <div style={examplesRowStyle}>
-        <span style={examplesLabelStyle}>Try:</span>
+        <span style={examplesLabelStyle}>{t("create.tryLabel")}</span>
         {PROMPT_EXAMPLES.map((example, idx) => (
           <button
             key={idx}
             type="button"
             onClick={() => setPrompt(example)}
             style={exampleChipStyle}
-            title="Click to use this prompt"
+            title={t("create.chipTitle")}
           >
             {truncate(example, 32)}
           </button>
         ))}
       </div>
 
-      <label style={{ ...labelStyle, marginTop: 24 }}>Map fidelity</label>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 24, marginBottom: 8 }}>
+        <label style={{ ...labelStyle, marginTop: 0 }}>{t("create.fidelityLabel")}</label>
+        <span style={{ fontSize: 11, color: "#7c87ad" }}>{t("create.estTime")}</span>
+      </div>
       <div style={sizeGridStyle}>
         {SIZE_OPTIONS.map((opt) => {
           const active = opt.value === sizeK;
@@ -321,7 +349,6 @@ function InputView({
               style={sizeOptionStyle(active)}
             >
               <span style={sizeOptionTitleStyle(active)}>{opt.label}</span>
-              <span style={sizeOptionDetailStyle}>{opt.detail}</span>
               <span style={sizeOptionEstimateStyle}>{opt.estimate}</span>
             </button>
           );
@@ -333,7 +360,7 @@ function InputView({
           <div>{submitError}</div>
           {conflictJobId && (
             <button type="button" onClick={onAttachToConflict} style={attachBtnStyle}>
-              Follow the running generation →
+              {t("create.attachBtn")}
             </button>
           )}
         </div>
@@ -346,9 +373,37 @@ function InputView({
           disabled={submitting || !prompt.trim()}
           style={primaryBtnStyle(submitting || !prompt.trim())}
         >
-          {submitting ? "Starting..." : "✨ Create World"}
+          {submitting ? t("create.starting") : t("create.createBtn")}
         </button>
       </div>
+
+      {libraryWorlds.length > 0 && (
+        <div style={sampleWorldsSectionStyle}>
+          <div style={sampleWorldsDividerStyle}>
+            <span style={sampleWorldsDividerLineStyle} />
+            <span style={sampleWorldsDividerTextStyle}>{t("create.sampleWorldsOr")}</span>
+            <span style={sampleWorldsDividerLineStyle} />
+          </div>
+          <p style={sampleWorldsSubtitleStyle}>{t("create.sampleWorldsHint")}</p>
+          <div style={sampleWorldsGridStyle}>
+            {libraryWorlds.map((world) => {
+              const isLoading = loadingSampleWorld === world.id;
+              return (
+                <button
+                  key={world.id}
+                  type="button"
+                  onClick={() => onLoadSampleWorld(world.id)}
+                  disabled={loadingSampleWorld !== null}
+                  style={sampleWorldCardStyle(isLoading, loadingSampleWorld !== null)}
+                >
+                  <span style={sampleWorldNameStyle}>{world.worldName}</span>
+                  {isLoading && <span style={sampleWorldLoadingStyle}>{t("create.sampleWorldLoading")}</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -376,13 +431,22 @@ function RunView({
   onCancelJob: () => void;
   cancelingJob: boolean;
 }) {
+  const { t } = useTranslation();
+
+  const PHASES = [
+    { phase: 1 as CreateJobPhase, title: t("create.phase1Title"), hint: t("create.phase1Hint") },
+    { phase: 2 as CreateJobPhase, title: t("create.phase2Title"), hint: t("create.phase2Hint") },
+    { phase: 3 as CreateJobPhase, title: t("create.phase3Title"), hint: t("create.phase3Hint") },
+    { phase: 4 as CreateJobPhase, title: t("create.phase4Title"), hint: t("create.phase4Hint") },
+  ];
+
   const currentPhase = snapshot?.phase ?? 1;
   const currentLabel =
     mode === "done"
-      ? "Your world is ready"
+      ? t("create.runTitleReady")
       : mode === "error"
-      ? "Generation failed"
-      : "Building your world...";
+      ? t("create.runTitleFailed")
+      : t("create.runTitleBuilding");
 
   const recentMilestones = useMemo(
     () =>
@@ -399,18 +463,16 @@ function RunView({
     [events],
   );
 
-  const estimate = SIZE_OPTIONS.find((o) => o.value === sizeK)?.estimate ?? "";
-
   return (
     <div style={cardStyle}>
       <div style={runHeaderStyle}>
         <div>
-          <div style={runEyebrowStyle}>
+          <div style={runEyebrowStyle(mode === "running")}>
             {mode === "done"
-              ? "Complete"
+              ? t("create.eyebrowComplete")
               : mode === "error"
-              ? "Stopped"
-              : `Generating · ${estimate}`}
+              ? t("create.eyebrowStopped")
+              : t("create.eyebrowGenerating")}
           </div>
           <div style={runTitleStyle}>{currentLabel}</div>
           {snapshot?.prompt && (
@@ -418,10 +480,8 @@ function RunView({
           )}
         </div>
         {mode === "running" && (
-          <div style={spinnerStyle} aria-hidden>
-            <div style={spinnerDotStyle(0)} />
-            <div style={spinnerDotStyle(1)} />
-            <div style={spinnerDotStyle(2)} />
+          <div style={sparkSpinnerStyle} aria-hidden>
+            ✦
           </div>
         )}
         {mode === "done" && <div style={badgeDoneStyle}>✓</div>}
@@ -470,7 +530,7 @@ function RunView({
               style={milestoneRowStyle(idx === 0)}
             >
               <span style={milestoneTimeStyle}>{formatTime(event.at)}</span>
-              <span style={milestoneLabelStyle}>{describeEvent(event)}</span>
+              <span style={milestoneLabelStyle}>{describeEvent(event, t)}</span>
             </div>
           ))}
         </div>
@@ -481,13 +541,13 @@ function RunView({
         onClick={() => setLogsOpen(!logsOpen)}
         style={logsToggleStyle}
       >
-        {logsOpen ? "Hide live logs" : "Show live logs"}{" "}
+        {logsOpen ? t("create.hideLogs") : t("create.showLogs")}{" "}
         <span style={{ opacity: 0.6, fontSize: 11 }}>({logLines.length})</span>
       </button>
       {logsOpen && (
         <div ref={logBoxRef} style={logsBoxStyle}>
           {logLines.length === 0 ? (
-            <div style={{ opacity: 0.5 }}>(no log lines yet)</div>
+            <div style={{ opacity: 0.5 }}>{t("create.noLogs")}</div>
           ) : (
             logLines.map((event, idx) => (
               <div
@@ -514,21 +574,20 @@ function RunView({
             disabled={cancelingJob}
             style={stopBtnStyle(cancelingJob)}
           >
-            {cancelingJob ? "Stopping..." : "Stop"}
+            {cancelingJob ? t("create.stopping") : t("create.stop")}
           </button>
         </div>
       )}
 
       {mode === "running" && (
         <div style={tipStyle}>
-          You can leave this tab open or close it — generation runs on the server
-          and resumes when you come back.
+          {t("create.tipRunning")}
         </div>
       )}
 
       {mode === "done" && (
         <div style={{ ...tipStyle, color: "#a3f7bf" }}>
-          Switching you into the new world…
+          {t("create.tipSwitching")}
         </div>
       )}
 
@@ -541,7 +600,7 @@ function RunView({
             </pre>
           )}
           <button type="button" onClick={onRetry} style={attachBtnStyle}>
-            ← Try again
+            {t("create.retryBtn")}
           </button>
         </div>
       )}
@@ -598,12 +657,11 @@ function applyEventToSnapshot(
   }
 }
 
-function describeEvent(event: CreateJobEvent): string {
+function describeEvent(event: CreateJobEvent, t: (key: string, opts?: Record<string, unknown>) => string): string {
   switch (event.kind) {
     case "phase":
-      return `Phase ${event.phase} · ${event.label}`;
     case "step":
-      return `Phase ${event.phase} · ${event.label}`;
+      return t("create.phaseLabel", { phase: event.phase, label: event.label });
     case "info":
       return event.label;
     default:
@@ -865,13 +923,26 @@ const runHeaderStyle: CSSProperties = {
   marginBottom: 22,
 };
 
-const runEyebrowStyle: CSSProperties = {
-  fontSize: 11,
-  letterSpacing: "0.16em",
-  textTransform: "uppercase",
-  color: "#8390b8",
-  marginBottom: 6,
-};
+function runEyebrowStyle(running: boolean): CSSProperties {
+  return {
+    fontSize: 11,
+    letterSpacing: "0.16em",
+    textTransform: "uppercase",
+    marginBottom: 6,
+    fontWeight: 700,
+    ...(running
+      ? {
+          background: "linear-gradient(90deg, #8390b8 0%, #dff3ff 50%, #8390b8 100%)",
+          backgroundSize: "200% auto",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          animation: "shimmer-text 3s linear infinite",
+        }
+      : {
+          color: "#8390b8",
+        }),
+  };
+}
 
 const runTitleStyle: CSSProperties = {
   fontSize: 22,
@@ -927,8 +998,7 @@ function stepperBulletStyle(
     justifyContent: "center",
     fontSize: 13,
     fontWeight: 700,
-    boxShadow: status === "active" ? "0 0 16px rgba(116,185,255,0.4)" : "none",
-    animation: status === "active" ? "spark-pulse 1.6s infinite" : "none",
+    animation: status === "active" ? "spark-pulse 2s infinite" : "none",
   };
 }
 
@@ -972,6 +1042,7 @@ function milestoneRowStyle(latest: boolean): CSSProperties {
     minWidth: 0,
     color: latest ? "#dff3ff" : "#a8b3d4",
     opacity: latest ? 1 : 0.78,
+    animation: "slide-up-fade 0.4s ease-out forwards",
   };
 }
 
@@ -1015,6 +1086,7 @@ const logsBoxStyle: CSSProperties = {
   color: "#cfe9ff",
   wordBreak: "break-all",
   overflowWrap: "anywhere",
+  animation: "logs-reveal 0.3s ease-out forwards",
 };
 
 const tipStyle: CSSProperties = {
@@ -1024,10 +1096,14 @@ const tipStyle: CSSProperties = {
   textAlign: "center",
 };
 
-const spinnerStyle: CSSProperties = {
+const sparkSpinnerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: 6,
+  justifyContent: "center",
+  fontSize: 24,
+  color: "#b486ff",
+  textShadow: "0 0 12px rgba(180,134,255,0.6)",
+  animation: "spin-slow 4s linear infinite",
 };
 
 const runFooterControlsStyle: CSSProperties = {
@@ -1052,17 +1128,6 @@ function stopBtnStyle(disabled: boolean): CSSProperties {
   };
 }
 
-function spinnerDotStyle(idx: number): CSSProperties {
-  return {
-    width: 8,
-    height: 8,
-    borderRadius: 999,
-    background: "linear-gradient(135deg, #74b9ff, #a55bff)",
-    boxShadow: "0 0 12px rgba(116,185,255,0.6)",
-    animation: `spark-bob 1.2s ease-in-out ${idx * 0.15}s infinite`,
-  };
-}
-
 const badgeDoneStyle: CSSProperties = {
   width: 36,
   height: 36,
@@ -1075,6 +1140,7 @@ const badgeDoneStyle: CSSProperties = {
   justifyContent: "center",
   fontSize: 18,
   fontWeight: 700,
+  animation: "scale-bounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards",
 };
 
 const badgeErrStyle: CSSProperties = {
@@ -1082,6 +1148,77 @@ const badgeErrStyle: CSSProperties = {
   background: "rgba(231,76,60,0.2)",
   color: "#ffd2cf",
   border: "1px solid rgba(231,76,60,0.6)",
+  animation: "none",
+};
+
+// --- Sample Worlds section styles ---
+
+const sampleWorldsSectionStyle: CSSProperties = {
+  marginTop: 32,
+};
+
+const sampleWorldsDividerStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 14,
+  marginBottom: 14,
+};
+
+const sampleWorldsDividerLineStyle: CSSProperties = {
+  flex: 1,
+  height: 1,
+  background: "rgba(255,255,255,0.1)",
+};
+
+const sampleWorldsDividerTextStyle: CSSProperties = {
+  fontSize: 12,
+  color: "#7c87ad",
+  whiteSpace: "nowrap",
+  letterSpacing: "0.04em",
+};
+
+const sampleWorldsSubtitleStyle: CSSProperties = {
+  margin: "0 0 14px 0",
+  fontSize: 12,
+  color: "#7c87ad",
+  lineHeight: 1.5,
+};
+
+const sampleWorldsGridStyle: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+  gap: 10,
+};
+
+function sampleWorldCardStyle(isLoading: boolean, anyLoading: boolean): CSSProperties {
+  return {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 4,
+    padding: "14px 16px",
+    background: isLoading
+      ? "linear-gradient(135deg, rgba(116,185,255,0.22), rgba(180,134,255,0.18))"
+      : "rgba(255,255,255,0.04)",
+    border: `1px solid ${isLoading ? "rgba(168,193,255,0.55)" : "rgba(255,255,255,0.1)"}`,
+    borderRadius: 14,
+    cursor: anyLoading ? (isLoading ? "wait" : "not-allowed") : "pointer",
+    opacity: anyLoading && !isLoading ? 0.5 : 1,
+    transition: "all 0.2s",
+    textAlign: "left",
+  };
+}
+
+const sampleWorldNameStyle: CSSProperties = {
+  fontSize: 14,
+  fontWeight: 600,
+  color: "#e8ecff",
+};
+
+const sampleWorldLoadingStyle: CSSProperties = {
+  fontSize: 11,
+  color: "#a3c2ff",
+  marginTop: 2,
 };
 
 // Inject keyframes once via a global <style>.
@@ -1090,12 +1227,30 @@ if (typeof document !== "undefined" && !document.getElementById("worldspark-crea
   styleEl.id = "worldspark-create-keyframes";
   styleEl.textContent = `
     @keyframes spark-pulse {
-      0%, 100% { transform: scale(1); box-shadow: 0 0 14px rgba(116,185,255,0.45); }
-      50% { transform: scale(1.06); box-shadow: 0 0 22px rgba(116,185,255,0.65); }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(116,185,255,0.4); transform: scale(1); }
+      70% { box-shadow: 0 0 0 10px rgba(116,185,255,0); transform: scale(1.05); }
+      100% { box-shadow: 0 0 0 0 rgba(116,185,255,0); transform: scale(1); }
     }
-    @keyframes spark-bob {
-      0%, 100% { transform: translateY(0); opacity: 0.8; }
-      50% { transform: translateY(-5px); opacity: 1; }
+    @keyframes shimmer-text {
+      0% { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    @keyframes spin-slow {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    @keyframes slide-up-fade {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scale-bounce {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+    @keyframes logs-reveal {
+      0% { opacity: 0; transform: translateY(-8px); }
+      100% { opacity: 1; transform: translateY(0); }
     }
   `;
   document.head.appendChild(styleEl);

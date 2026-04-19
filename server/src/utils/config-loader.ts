@@ -137,6 +137,10 @@ function normalizeCharacterProfile(raw: any): CharacterProfile | null {
     nickname: raw.nickname || raw.name,
     startPosition: startLocation,
     backstory: typeof raw.backstory === "string" ? raw.backstory : undefined,
+    appearanceHint:
+      typeof raw.appearanceHint === "string" && raw.appearanceHint.trim()
+        ? raw.appearanceHint.trim()
+        : undefined,
     coreTraits,
     coreMotivation: raw.coreMotivation || raw.motivation || raw.role || "在这个世界中过好自己的生活",
     coreValues: Array.isArray(raw.coreValues) ? raw.coreValues : [],
@@ -345,18 +349,19 @@ function normalizeSceneConfig(raw: Record<string, unknown> | null | undefined): 
 function normalizeMultiDay(
   raw: unknown,
   startTime: string,
-  maxTicks: number | null,
+  _maxTicks: number | null,
   sceneType: SceneConfig["sceneType"],
 ): SceneConfig["multiDay"] {
   const data = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
-  const enabled =
-    typeof data.enabled === "boolean" ? data.enabled : sceneType === "open" || maxTicks !== null;
+  const enabled = sceneType === "open";
   const nextDayStartTime = sceneType === "open" ? startTime : "00:00";
 
   return {
     enabled,
-    dayTransitionText:
-      typeof data.dayTransitionText === "string" ? data.dayTransitionText : "",
+    endOfDayText:
+      typeof data.endOfDayText === "string" ? data.endOfDayText : "",
+    newDayText:
+      typeof data.newDayText === "string" ? data.newDayText : (typeof data.dayTransitionText === "string" ? data.dayTransitionText : ""),
     nextDayStartTime:
       typeof data.nextDayStartTime === "string" && data.nextDayStartTime
         ? data.nextDayStartTime

@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 import { apiClient } from "../services/api-client";
 import type { CharacterInfo } from "../../types/api";
 
 type ChatMsg = { role: "user" | "character"; content: string; pending?: boolean };
 
-const IDENTITY_PRESETS = [
-  { label: "不设身份", value: "" },
-  { label: "老朋友", value: "你的一位老朋友，你们很久没见了。" },
-  { label: "一名记者", value: "一名陌生的记者，在做某个专题的采访。" },
-  { label: "街边陌生人", value: "一个在街边偶遇的陌生人，和你搭了几句话。" },
-  { label: "未来的自己", value: "一个自称是你未来某一时刻的自己——你不确定这是不是真的。" },
-  { label: "敌对势力的人", value: "一个立场和你对立的人，靠近你似乎别有用心。" },
+const IDENTITY_PRESET_KEYS = [
+  { labelKey: "sandbox.presetNone", valueKey: "" },
+  { labelKey: "sandbox.presetOldFriend", valueKey: "sandbox.presetOldFriendVal" },
+  { labelKey: "sandbox.presetReporter", valueKey: "sandbox.presetReporterVal" },
+  { labelKey: "sandbox.presetStranger", valueKey: "sandbox.presetStrangerVal" },
+  { labelKey: "sandbox.presetFutureSelf", valueKey: "sandbox.presetFutureSelfVal" },
+  { labelKey: "sandbox.presetEnemy", valueKey: "sandbox.presetEnemyVal" },
 ];
 
 export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
+  const { t } = useTranslation();
   const [characters, setCharacters] = useState<CharacterInfo[]>([]);
   const [charId, setCharId] = useState("");
   const [identity, setIdentity] = useState("");
@@ -57,13 +59,13 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
         setActiveChar(null);
         setMessages([]);
         setDraft("");
-        setErr("当前对话会话已失效，请重新开始。");
+        setErr(t("sandbox.sessionExpired"));
       });
 
     return () => {
       cancelled = true;
     };
-  }, [sessionId]);
+  }, [sessionId, t]);
 
   const startSession = async () => {
     if (!charId) return;
@@ -132,7 +134,7 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
           if (next[i].pending) {
             next[i] = {
               role: "character",
-              content: `（对话失败：${errorText}）`,
+              content: t("sandbox.chatFailed", { error: errorText }),
             };
             break;
           }
@@ -144,7 +146,7 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
         setSessionId(null);
         setActiveChar(null);
         setDraft("");
-        setErr("当前对话会话已失效，请重新开始。");
+        setErr(t("sandbox.sessionExpired"));
       }
     } finally {
       setBusy(false);
@@ -164,9 +166,9 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
         <div style={headerStyle}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 16 }}>💬</span>
-            <span style={{ fontWeight: 700, fontSize: 14 }}>架空对话</span>
+            <span style={{ fontWeight: 700, fontSize: 14 }}>{t("sandbox.title")}</span>
             <span style={{ opacity: 0.55, fontSize: 11 }}>
-              不进入记忆、不影响世界——把角色"叫出来"与你单独聊。
+              {t("sandbox.subtitle")}
             </span>
           </div>
           <button onClick={onClose} style={closeBtnStyle}>×</button>
@@ -174,7 +176,7 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
 
         {!sessionId && (
           <div style={bodyStyle}>
-            <label style={{ ...labelStyle, marginTop: 4 }}>和谁聊</label>
+            <label style={{ ...labelStyle, marginTop: 4 }}>{t("sandbox.whoToChat")}</label>
             <select
               value={charId}
               onChange={(e) => setCharId(e.target.value)}
@@ -189,41 +191,40 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
 
             <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 8, padding: 12, border: "1px solid rgba(255,255,255,0.06)" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                <label style={{ ...labelStyle, marginBottom: 0 }}>高级：设定你扮演的身份（可选）</label>
+                <label style={{ ...labelStyle, marginBottom: 0 }}>{t("sandbox.identityLabel")}</label>
               </div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                {IDENTITY_PRESETS.map((p) => (
+                {IDENTITY_PRESET_KEYS.map((p) => (
                   <button
-                    key={p.label}
-                    onClick={() => setIdentity(p.value)}
-                    style={chipStyle(identity === p.value)}
+                    key={p.labelKey}
+                    onClick={() => setIdentity(p.valueKey ? t(p.valueKey) : "")}
+                    style={chipStyle(identity === (p.valueKey ? t(p.valueKey) : ""))}
                   >
-                    {p.label}
+                    {t(p.labelKey)}
                   </button>
                 ))}
               </div>
               <textarea
                 value={identity}
                 onChange={(e) => setIdentity(e.target.value)}
-                placeholder="留空 = 对方不知道你是谁；也可以写：一位自称来自未来的访客……"
+                placeholder={t("sandbox.identityPlaceholder")}
                 rows={2}
                 style={{ ...textareaStyle, width: "100%", boxSizing: "border-box", fontSize: 12 }}
               />
             </div>
 
             <div style={hintStyle}>
-              这段对话完全独立于主模拟：不会生成记忆、不会改变任何角色此后的行为。
-              关闭后会话即销毁。
+              {t("sandbox.hint")}
             </div>
 
-            {err && <div style={errStyle}>失败：{err}</div>}
+            {err && <div style={errStyle}>{t("sandbox.failed", { error: err })}</div>}
 
             <button
               onClick={startSession}
               disabled={busy || !charId}
               style={{ ...primaryBtnStyle(busy), padding: "12px 14px", fontSize: 15, marginTop: 4 }}
             >
-              {busy ? "接通中…" : "进入对话"}
+              {busy ? t("sandbox.connecting") : t("sandbox.startChat")}
             </button>
           </div>
         )}
@@ -237,13 +238,13 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
                   ({activeChar.mbtiType})
                 </span>
               </div>
-              <button onClick={resetSession} style={smallBtnStyle}>← 返回重选</button>
+              <button onClick={resetSession} style={smallBtnStyle}>{t("sandbox.backToSelect")}</button>
             </div>
 
             <div ref={scrollRef} style={scrollStyle}>
               {messages.length === 0 && (
                 <div style={{ opacity: 0.5, fontSize: 12, textAlign: "center", padding: 16 }}>
-                  （输入消息并点“发送”，对话就会开始）
+                  {t("sandbox.emptyChat")}
                 </div>
               )}
               {messages.map((m, i) => (
@@ -266,7 +267,7 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={onKey}
-                placeholder="输入你的话……⌘/Ctrl+Enter 发送"
+                placeholder={t("sandbox.chatPlaceholder")}
                 rows={2}
                 style={{ ...textareaStyle, flex: 1 }}
                 disabled={busy}
@@ -277,7 +278,7 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
                 disabled={busy || !draft.trim()}
                 style={sendBtnStyle(busy || !draft.trim())}
               >
-                {busy ? "…" : "发送"}
+                {busy ? "…" : t("sandbox.send")}
               </button>
             </div>
           </div>

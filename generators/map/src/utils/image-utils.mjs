@@ -190,15 +190,20 @@ export async function computeWalkableGrid(originalBuffer, markedBuffer, tileSize
   const gridWidth = Math.floor(targetW / actualBlockSize);
   const gridHeight = Math.floor(targetH / actualBlockSize);
   const grid = [];
+  const evidenceGrid = [];
 
   let debugWalkable = 0;
+  let rescuedThinCorridor = 0;
 
   for (let gy = 0; gy < gridHeight; gy++) {
     const row = [];
+    const evidenceRow = [];
     for (let gx = 0; gx < gridWidth; gx++) {
       let origR = 0, origG = 0, origB = 0;
       let markR = 0, markG = 0, markB = 0;
       let count = 0;
+      let strongCyanPixels = 0;
+      let weakCyanPixels = 0;
 
       for (let dy = 0; dy < actualBlockSize; dy++) {
         for (let dx = 0; dx < actualBlockSize; dx++) {
@@ -208,6 +213,16 @@ export async function computeWalkableGrid(originalBuffer, markedBuffer, tileSize
 
           origR += origRaw[idx];     origG += origRaw[idx + 1]; origB += origRaw[idx + 2];
           markR += markRaw[idx];     markG += markRaw[idx + 1]; markB += markRaw[idx + 2];
+
+          const pixelDeltaR = markRaw[idx] - origRaw[idx];
+          const pixelDeltaG = markRaw[idx + 1] - origRaw[idx + 1];
+          const pixelDeltaB = markRaw[idx + 2] - origRaw[idx + 2];
+
+          if (pixelDeltaG >= 18 && pixelDeltaB >= 18 && pixelDeltaR <= 8) {
+            strongCyanPixels++;
+          } else if (pixelDeltaG >= 10 && pixelDeltaB >= 10 && pixelDeltaR <= 14) {
+            weakCyanPixels++;
+          }
           count++;
         }
       }
@@ -220,23 +235,56 @@ export async function computeWalkableGrid(originalBuffer, markedBuffer, tileSize
       const deltaB = aMarkB - aOrigB;
 
       // Cyan overlay increases G and B while suppressing R.
-      // A block is walkable if G+B increased meaningfully more than R.
+      // Bias conservative: require a meaningful amount of the tile to actually
+      // look cyan, not just a slight average tint. This avoids over-expanding
+      // walkable zones during tile conversion.
       const cyanShift = Math.min(deltaG, deltaB) - deltaR;
-      const isWalkable = cyanShift > 10 && (deltaG > 5 || deltaB > 5);
+      const strongCoverage = strongCyanPixels / count;
+      const weakCoverage = (strongCyanPixels + weakCyanPixels) / count;
+      const isWalkable =
+        strongCoverage >= 0.22 ||
+        (weakCoverage >= 0.38 && cyanShift >= 8 && deltaG >= 8 && deltaB >= 8);
 
       if (isWalkable) debugWalkable++;
       row.push(isWalkable ? 0 : 1);
+      evidenceRow.push({ strongCoverage, weakCoverage, cyanShift, deltaG, deltaB });
     }
     grid.push(row);
+    evidenceGrid.push(evidenceRow);
   }
 
-  console.log(`[grid] Result: ${gridWidth}x${gridHeight}, walkable: ${debugWalkable}/${gridWidth * gridHeight} (${(debugWalkable / (gridWidth * gridHeight) * 100).toFixed(1)}%)`);
+  // Preserve genuinely thin one-tile corridors. If a blocked tile has moderate
+  // cyan evidence and is the only connector between two walkable tiles in a
+  // straight line, keep it walkable instead of shrinking it away.
+  for (let y = 1; y < gridHeight - 1; y++) {
+    for (let x = 1; x < gridWidth - 1; x++) {
+      if (grid[y][x] === 0) continue;
+      const evidence = evidenceGrid[y][x];
+      const horizontalBridge = grid[y][x - 1] === 0 && grid[y][x + 1] === 0;
+      const verticalBridge = grid[y - 1][x] === 0 && grid[y + 1][x] === 0;
+      const moderateEvidence =
+        evidence.strongCoverage >= 0.08 ||
+        (evidence.weakCoverage >= 0.18 && evidence.cyanShift >= 5);
+
+      if ((horizontalBridge || verticalBridge) && moderateEvidence) {
+        grid[y][x] = 0;
+        debugWalkable++;
+        rescuedThinCorridor++;
+      }
+    }
+  }
+
+  console.log(
+    `[grid] Result: ${gridWidth}x${gridHeight}, walkable: ${debugWalkable}/${gridWidth * gridHeight} (${(debugWalkable / (gridWidth * gridHeight) * 100).toFixed(1)}%), thin-corridor rescues: ${rescuedThinCorridor}`,
+  );
 
   return { grid, gridWidth, gridHeight, actualBlockSize };
 }
 
 /**
- * Morphological cleanup: remove isolated single-cell noise and fill single-cell gaps.
+ * Morphological cleanup: remove isolated single-cell walkable noise only.
+ * We intentionally do NOT fill blocked gaps here, because that tends to make
+ * walkable regions wider than the model actually marked.
  */
 export function cleanupGrid(grid) {
   const h = grid.length;
@@ -253,9 +301,6 @@ export function cleanupGrid(grid) {
 
       if (grid[y][x] === 0 && walkableNeighbors === 0) {
         result[y][x] = 1;
-      }
-      if (grid[y][x] === 1 && walkableNeighbors === 4) {
-        result[y][x] = 0;
       }
     }
   }

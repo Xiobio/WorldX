@@ -173,6 +173,12 @@ function normalizeInteractiveElement(element, index) {
   };
 }
 
+function normalizeWorldSocialContext(value, fallback = "") {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed || fallback;
+}
+
 function normalizeCharacterAnchor(anchor) {
   if (!anchor || typeof anchor !== "object") return undefined;
   const type = anchor.type;
@@ -218,15 +224,14 @@ function normalizeTimeConfig(rawTimeConfig, sceneType) {
   return { startTime, tickDurationMinutes: TICK_DURATION, maxTicks, displayFormat };
 }
 
-function normalizeMultiDayConfig(rawMultiDay, sceneType, startTime) {
-  const md = rawMultiDay && typeof rawMultiDay === "object" ? rawMultiDay : {};
-  const enabled =
-    typeof md.enabled === "boolean" ? md.enabled : sceneType === "open";
-  const dayTransitionText =
-    typeof md.dayTransitionText === "string" ? md.dayTransitionText : "";
+function normalizeMultiDayConfig(rawInput, sceneType, startTime) {
+  const md = rawInput && typeof rawInput === "object" ? rawInput : {};
+  const enabled = sceneType === "open";
+  const endOfDayText = typeof md.endOfDayText === "string" ? md.endOfDayText : "";
+  const newDayText = typeof md.newDayText === "string" ? md.newDayText : (typeof md.dayTransitionText === "string" ? md.dayTransitionText : "");
   const nextDayStartTime = sceneType === "open" ? startTime : "00:00";
 
-  return { enabled, dayTransitionText, nextDayStartTime };
+  return { enabled, endOfDayText, newDayText, nextDayStartTime };
 }
 
 export function normalizeWorldDesign(rawDesign) {
@@ -271,7 +276,7 @@ export function normalizeWorldDesign(rawDesign) {
   const sceneType = rawDesign?.sceneType === "open" ? "open" : "closed";
   const timeConfig = normalizeTimeConfig(rawDesign?.timeConfig, sceneType);
   const multiDay = normalizeMultiDayConfig(
-    rawDesign?.multiDay,
+    rawDesign?.sceneTransitionText || rawDesign?.multiDay,
     sceneType,
     timeConfig.startTime,
   );
@@ -281,6 +286,10 @@ export function normalizeWorldDesign(rawDesign) {
     sceneType,
     timeConfig,
     multiDay,
+    worldSocialContext: normalizeWorldSocialContext(
+      rawDesign?.worldSocialContext,
+      typeof rawDesign?.worldDescription === "string" ? rawDesign.worldDescription.trim() : "",
+    ),
     regions,
     interactiveElements,
     characters,

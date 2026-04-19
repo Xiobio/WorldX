@@ -1,6 +1,6 @@
-# WorldSeed: One Sentence, One World
+# WorldX: One Sentence, One World
 
-Generate a living AI world from a single sentence. WorldSeed creates pixel-art maps, unique characters, and runs autonomous agent simulations — all from one text prompt.
+Generate a living AI world from a single sentence. WorldX creates pixel-art maps, unique characters, and runs autonomous agent simulations — all from one text prompt.
 
 ## Architecture
 
@@ -38,7 +38,7 @@ Map Gen   Character Gen   ← Gemini-powered pixel art pipelines
 ### Setup
 
 ```bash
-cd world-seed
+cd WorldX
 cp .env.example .env   # Fill in your API keys
 npm install
 ```
@@ -69,7 +69,7 @@ The simulation can be controlled from the top bar:
 ## Project Structure
 
 ```
-world-seed/
+WorldX/
 ├── orchestrator/         # LLM-driven world design & config generation
 │   ├── src/
 │   │   ├── index.mjs           # Main entry: sentence → world
@@ -99,7 +99,7 @@ world-seed/
 
 ## Scene-Based Time
 
-WorldSeed uses a scene-configurable time system:
+WorldX uses a scene-configurable time system:
 
 - **Closed scenes** (e.g., "Doomsday Supermarket"): continuous time, characters can't leave
 - **Open scenes** (e.g., "Song Dynasty Night Market"): time-limited (e.g., 18:00–02:00), characters come and go

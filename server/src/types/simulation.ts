@@ -102,6 +102,7 @@ export interface Perception {
     name: string;
     currentAction: string | null;
     emotionLabel?: string;
+    appearanceHint?: string;
     locationId?: string;
     locationName?: string;
   }[];

@@ -1,5 +1,5 @@
 {
-  "name": "world-seed-client",
+  "name": "worldx-client",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,9 +10,11 @@
   "dependencies": {
     "@tanstack/react-query": "^5.99.0",
     "easystarjs": "^0.4.4",
+    "i18next": "^26.0.6",
     "phaser": "^3.87.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-i18next": "^17.0.4",
     "react-router-dom": "^7.5.0",
     "recharts": "^3.8.1",
     "vis-data": "^7.1.9",

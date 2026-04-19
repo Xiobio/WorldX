@@ -15,6 +15,7 @@ export interface CharacterProfile {
   nickname: string;
   startPosition: string;
   backstory?: string;
+  appearanceHint?: string;
 
   coreTraits: string[];
   coreMotivation: string;

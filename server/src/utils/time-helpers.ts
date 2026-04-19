@@ -9,7 +9,8 @@ export interface SceneTimeConfig {
   displayFormat: "modern" | "ancient_chinese" | "fantasy";
   multiDay: {
     enabled: boolean;
-    dayTransitionText: string;
+    endOfDayText: string;
+    newDayText: string;
     nextDayStartTime: string;
   };
 }
@@ -35,7 +36,8 @@ let currentSceneConfig: SceneTimeConfig = {
   displayFormat: "modern",
   multiDay: {
     enabled: false,
-    dayTransitionText: "",
+    endOfDayText: "",
+    newDayText: "",
     nextDayStartTime: "08:00",
   },
 };
@@ -45,7 +47,8 @@ export function setSceneConfig(config: SceneTimeConfig): void {
     ...config,
     multiDay: {
       enabled: config.multiDay?.enabled ?? false,
-      dayTransitionText: config.multiDay?.dayTransitionText ?? "",
+      endOfDayText: config.multiDay?.endOfDayText ?? "",
+      newDayText: config.multiDay?.newDayText ?? (config.multiDay as any)?.dayTransitionText ?? "",
       nextDayStartTime: config.multiDay?.nextDayStartTime || config.startTime,
     },
   };
@@ -204,6 +207,34 @@ export function buildWorldTimeInfo(
     timeString: tickToSceneTime(gameTime.tick, config),
     period: getTimePeriodLabel(gameTime.tick, config),
   };
+}
+
+export function relativeTimeLabel(
+  memoryDay: number,
+  memoryTick: number,
+  now: GameTime,
+): string {
+  if (memoryDay === now.day) {
+    const tickDiff = now.tick - memoryTick;
+    if (tickDiff <= 2) return "刚才";
+    if (tickDiff <= 6) return "不久前";
+    return "今天早些时候";
+  }
+  if (memoryDay === now.day - 1) return "昨天";
+  const gap = now.day - memoryDay;
+  return `${gap}天前`;
+}
+
+export function getSceneEndingHint(
+  tick: number,
+  config?: SceneTimeConfig,
+): string {
+  const c = config || currentSceneConfig;
+  const limit = getSceneTickLimit(c);
+  const remaining = limit - 1 - tick;
+  const threshold = c.tickDurationMinutes > 30 ? 1 : 2;
+  if (remaining > threshold) return "";
+  return "⏰ 这一幕即将结束。不要发起新的对话，正在进行的对话请自然收束，不要开启新话题。";
 }
 
 function getEffectiveStartTime(config: SceneTimeConfig): string {

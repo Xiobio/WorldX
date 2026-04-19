@@ -2,11 +2,17 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import type { CSSProperties, ChangeEvent } from "react";
 import { createPortal } from "react-dom";
-import type { WorldTimeInfo } from "../../types/api";
+import { useTranslation } from "react-i18next";
+import type { WorldTimeInfo, TimelineMeta } from "../../types/api";
 import { apiClient } from "../services/api-client";
 import type { WorldInfo, GeneratedWorldSummary } from "../services/api-client";
 import { GodPanel } from "./GodPanel";
 import { SandboxChatPanel } from "./SandboxChatPanel";
+import { TimelineManagerModal } from "./TimelineManagerModal";
+import { LanguageToggle } from "../components/LanguageToggle";
+import { translatePeriod } from "../utils/time-i18n";
+
+type ViewMode = "run" | "replay";
 
 export function TopBar({
   worldInfo,
@@ -21,10 +27,14 @@ export function TopBar({
   onToggleMainAreaPointsOverlay,
   onToggleInteractiveObjectsOverlay,
   onToggleAutoPlay,
-  onResetWorld,
+  onNewTimeline,
   simStatus,
   autoPlayEnabled,
   isResetting,
+  isReplaying,
+  replayProgress,
+  onStartReplay,
+  onStopReplay,
   onHeightChange,
 }: {
   worldInfo?: WorldInfo | null;
@@ -39,94 +49,124 @@ export function TopBar({
   onToggleMainAreaPointsOverlay: () => void;
   onToggleInteractiveObjectsOverlay: () => void;
   onToggleAutoPlay: () => void;
-  onResetWorld: () => void;
+  onNewTimeline: () => void;
   simStatus: "idle" | "running" | "paused" | "error";
   autoPlayEnabled: boolean;
   isResetting: boolean;
+  isReplaying: boolean;
+  replayProgress: { current: number; total: number } | null;
+  onStartReplay: () => void;
+  onStopReplay: () => void;
   onHeightChange?: (height: number) => void;
 }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [availableWorlds, setAvailableWorlds] = useState<GeneratedWorldSummary[]>([]);
+  const [libraryWorlds, setLibraryWorlds] = useState<GeneratedWorldSummary[]>([]);
   const [selectedWorldId, setSelectedWorldId] = useState("");
   const [isSwitchingWorld, setIsSwitchingWorld] = useState(false);
   const [godPanelOpen, setGodPanelOpen] = useState(false);
   const [sandboxChatOpen, setSandboxChatOpen] = useState(false);
   const [showPauseToast, setShowPauseToast] = useState(false);
-  const [deletePopoverOpen, setDeletePopoverOpen] = useState(false);
-  const [deletingWorldId, setDeletingWorldId] = useState<string | null>(null);
   const [isChangingTickGranularity, setIsChangingTickGranularity] = useState(false);
+  const [managerModalOpen, setManagerModalOpen] = useState(false);
+  const [timelines, setTimelines] = useState<TimelineMeta[]>([]);
+  const [selectedTimelineId, setSelectedTimelineId] = useState("");
+  const [isSwitchingTimeline, setIsSwitchingTimeline] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>("run");
   const barRef = useRef<HTMLDivElement | null>(null);
-  const deleteButtonRef = useRef<HTMLButtonElement | null>(null);
-  const deletePopoverRef = useRef<HTMLDivElement | null>(null);
   const isRunning = simStatus === "running";
-  const isBusy = isRunning || isResetting || isSwitchingWorld || isChangingTickGranularity;
+  const isBusy = isRunning || isResetting || isSwitchingWorld || isSwitchingTimeline || isChangingTickGranularity;
   const autoPlayToggleDisabled =
-    isResetting || isSwitchingWorld || isChangingTickGranularity || (isRunning && !autoPlayEnabled);
+    isResetting || isSwitchingWorld || isSwitchingTimeline || isChangingTickGranularity || (isRunning && !autoPlayEnabled);
+
+  const inRunMode = viewMode === "run" && !isReplaying;
+  const inReplayMode = viewMode === "replay" || isReplaying;
+
+  useEffect(() => {
+    if (!isReplaying && viewMode === "replay") setViewMode("run");
+  }, [isReplaying, viewMode]);
 
   useEffect(() => {
     let cancelled = false;
-
     apiClient.getGeneratedWorlds()
       .then((response) => {
         if (cancelled) return;
         setAvailableWorlds(response.worlds);
+        setLibraryWorlds(response.libraryWorlds ?? []);
+        const allWorlds = [...response.worlds, ...(response.libraryWorlds ?? [])];
         const defaultWorldId =
           response.currentWorldId ||
-          response.worlds.find((world) => world.isCurrent)?.id ||
-          response.worlds[0]?.id ||
+          allWorlds.find((world) => world.isCurrent)?.id ||
+          allWorlds[0]?.id ||
           "";
-        if (defaultWorldId) {
-          setSelectedWorldId(defaultWorldId);
-        }
+        if (defaultWorldId) setSelectedWorldId(defaultWorldId);
       })
       .catch(() => {});
 
-    return () => {
-      cancelled = true;
-    };
+    apiClient.getTimelines()
+      .then((response) => {
+        if (cancelled) return;
+        setTimelines(response.timelines);
+        if (response.currentTimelineId) setSelectedTimelineId(response.currentTimelineId);
+      })
+      .catch(() => {});
+
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    if (worldInfo?.currentWorldId) {
-      setSelectedWorldId(worldInfo.currentWorldId);
-    }
-  }, [worldInfo?.currentWorldId]);
+    if (worldInfo?.currentWorldId) setSelectedWorldId(worldInfo.currentWorldId);
+    if (worldInfo?.currentTimelineId) setSelectedTimelineId(worldInfo.currentTimelineId);
+  }, [worldInfo?.currentWorldId, worldInfo?.currentTimelineId]);
 
   useEffect(() => {
     if (!onHeightChange || !barRef.current) return;
-
     const node = barRef.current;
-    const notifyHeight = () => {
-      onHeightChange(Math.ceil(node.getBoundingClientRect().height));
-    };
-
+    const notifyHeight = () => onHeightChange(Math.ceil(node.getBoundingClientRect().height));
     notifyHeight();
     const observer = new ResizeObserver(notifyHeight);
     observer.observe(node);
     window.addEventListener("resize", notifyHeight);
-
     return () => {
       observer.disconnect();
       window.removeEventListener("resize", notifyHeight);
     };
   }, [onHeightChange]);
 
+  const handleSwitchToReplay = () => {
+    if (autoPlayEnabled) onToggleAutoPlay();
+    setViewMode("replay");
+    onStartReplay();
+  };
+
+  const handleSwitchToRun = () => {
+    if (isReplaying) onStopReplay();
+    setViewMode("run");
+  };
+
   const statusLabel =
-    isSwitchingWorld
-      ? "Switching World"
+    inReplayMode
+      ? (isReplaying ? t("topbar.statusReplaying") : t("topbar.statusReplayReady"))
+      : isSwitchingWorld
+      ? t("topbar.statusSwitchingWorld")
+      : isSwitchingTimeline
+      ? t("topbar.statusSwitchingTimeline")
       : isResetting
-      ? "Resetting"
+      ? t("topbar.statusCreatingTimeline")
       : simStatus === "running"
-      ? "Simulating"
+      ? t("topbar.statusSimulating")
       : autoPlayEnabled
-        ? "Auto Play"
+        ? t("topbar.statusAutoPlay")
       : simStatus === "paused"
-        ? "Paused"
+        ? t("topbar.statusPaused")
         : simStatus === "error"
-          ? "Error"
-          : "Idle";
+          ? t("topbar.statusError")
+          : t("topbar.statusIdle");
   const statusColor =
-    isSwitchingWorld
+    inReplayMode
+      ? "#e17055"
+      : isSwitchingWorld || isSwitchingTimeline
       ? "#9b59b6"
       : isResetting
       ? "#e67e22"
@@ -145,54 +185,28 @@ export function TopBar({
     setTimeout(() => setShowPauseToast(false), 3500);
   };
 
-  const worldName = worldInfo?.worldName || "WorldSpark";
+  const worldName = worldInfo?.worldName || "WorldX";
+  const period = gameTime.period ? translatePeriod(gameTime.period) : "";
   const timeLabel = gameTime.timeString
-    ? `Day ${gameTime.day} · ${gameTime.timeString}${gameTime.period ? ` · ${gameTime.period}` : ""}`
-    : `Day ${gameTime.day}`;
+    ? (period
+      ? t("topbar.dayTimePeriod", { day: gameTime.day, time: gameTime.timeString, period })
+      : t("topbar.dayTime", { day: gameTime.day, time: gameTime.timeString }))
+    : t("topbar.dayOnly", { day: gameTime.day });
 
-  useEffect(() => {
-    if (!deletePopoverOpen) return;
-    const onDocClick = (event: MouseEvent) => {
-      const target = event.target as Node | null;
-      if (!target) return;
-      if (deleteButtonRef.current?.contains(target)) return;
-      if (deletePopoverRef.current?.contains(target)) return;
-      setDeletePopoverOpen(false);
-    };
-    const onEsc = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setDeletePopoverOpen(false);
-    };
-    document.addEventListener("mousedown", onDocClick);
-    document.addEventListener("keydown", onEsc);
-    return () => {
-      document.removeEventListener("mousedown", onDocClick);
-      document.removeEventListener("keydown", onEsc);
-    };
-  }, [deletePopoverOpen]);
-
-  const handleDeleteWorld = async (worldToDelete: GeneratedWorldSummary) => {
-    if (worldToDelete.id === selectedWorldId) {
-      window.alert(
-        "Switch to a different world before deleting this one — the active world cannot be removed.",
-      );
-      return;
-    }
-    const confirmed = window.confirm(
-      `Permanently delete world "${worldToDelete.worldName}" (${worldToDelete.id})? This cannot be undone.`,
-    );
+  const handleTimelineChange = async (event: ChangeEvent<HTMLSelectElement>) => {
+    const nextTimelineId = event.target.value;
+    if (!nextTimelineId || nextTimelineId === selectedTimelineId) return;
+    const confirmed = window.confirm(t("topbar.confirmSwitchTimeline"));
     if (!confirmed) return;
-
-    setDeletingWorldId(worldToDelete.id);
+    setSelectedTimelineId(nextTimelineId);
+    setIsSwitchingTimeline(true);
     try {
-      await apiClient.deleteWorld(worldToDelete.id);
-      setAvailableWorlds((prev) => prev.filter((w) => w.id !== worldToDelete.id));
+      await apiClient.loadTimeline(nextTimelineId);
+      window.location.reload();
     } catch (error) {
-      console.warn("[TopBar] Failed to delete world:", error);
-      window.alert(
-        `Delete failed: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    } finally {
-      setDeletingWorldId(null);
+      console.warn("[TopBar] Failed to switch timeline:", error);
+      window.alert(t("topbar.switchFailed", { error: error instanceof Error ? error.message : String(error) }));
+      setIsSwitchingTimeline(false);
     }
   };
 
@@ -200,38 +214,31 @@ export function TopBar({
     const nextValue = Number(event.target.value);
     const currentValue = worldInfo?.sceneConfig.tickDurationMinutes ?? 15;
     if (nextValue === currentValue) return;
-
     const confirmed = window.confirm(
-      `Switch tick granularity to ${nextValue} minutes? This dev-only change will reset the current simulation state and reload the page.`,
+      t("topbar.confirmSwitchTickGranularity", { value: nextValue }),
     );
-    if (!confirmed) {
-      event.target.value = String(currentValue);
-      return;
-    }
-
+    if (!confirmed) { event.target.value = String(currentValue); return; }
     setIsChangingTickGranularity(true);
     try {
       await apiClient.setDevTickDurationMinutes(nextValue as 15 | 30 | 60);
       window.location.reload();
     } catch (error) {
       console.warn("[TopBar] Failed to change dev tick granularity:", error);
-      window.alert(`Update failed: ${error instanceof Error ? error.message : String(error)}`);
+      window.alert(t("topbar.updateFailed", { error: error instanceof Error ? error.message : String(error) }));
       setIsChangingTickGranularity(false);
     }
   };
 
+  const allWorlds = [...availableWorlds, ...libraryWorlds];
+
   const handleWorldChange = async (event: ChangeEvent<HTMLSelectElement>) => {
     const nextWorldId = event.target.value;
     if (!nextWorldId || nextWorldId === selectedWorldId) return;
-
-    const nextWorld = availableWorlds.find((world) => world.id === nextWorldId);
+    const nextWorld = allWorlds.find((world) => world.id === nextWorldId);
     const confirmed = window.confirm(
-      `Switch to "${nextWorld?.worldName ?? nextWorldId}"? This will reset the current simulation state and reload the page.`,
+      t("topbar.confirmSwitchWorld", { name: nextWorld?.worldName ?? nextWorldId }),
     );
-    if (!confirmed) {
-      return;
-    }
-
+    if (!confirmed) return;
     const previousWorldId = selectedWorldId;
     setSelectedWorldId(nextWorldId);
     setIsSwitchingWorld(true);
@@ -241,10 +248,13 @@ export function TopBar({
     } catch (error) {
       setSelectedWorldId(previousWorldId);
       console.warn("[TopBar] Failed to switch world:", error);
-      window.alert(`Switch failed: ${error instanceof Error ? error.message : String(error)}`);
+      window.alert(t("topbar.switchFailed", { error: error instanceof Error ? error.message : String(error) }));
       setIsSwitchingWorld(false);
     }
   };
+
+  const currentTl = timelines.find((t) => t.id === selectedTimelineId);
+  const hasReplayContent = currentTl ? currentTl.tickCount > 0 : false;
 
   return (
     <div
@@ -268,156 +278,152 @@ export function TopBar({
         pointerEvents: "auto",
       }}
     >
-      {/* 第一行：状态信息与核心控制 */}
+      {/* Row 1: status info + world/timeline selectors + mode toggle + play */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+        {/* Left: world name + status + time */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0 }}>
           <span style={{ fontWeight: 700, fontSize: 15, whiteSpace: "nowrap" }}>
             🌍 {worldName}
           </span>
-          <span
-            style={{
-              width: 8,
-              height: 8,
-              borderRadius: "50%",
-              background: statusColor,
-              animation: isBusy ? "pulse 1s infinite" : "pulse 2s infinite",
-              flexShrink: 0,
-            }}
-          />
+          <span style={{
+            width: 8, height: 8, borderRadius: "50%",
+            background: statusColor,
+            animation: (isBusy || isReplaying) ? "pulse 1s infinite" : "pulse 2s infinite",
+            flexShrink: 0,
+          }} />
           <span style={{ fontSize: 11, opacity: 0.78, whiteSpace: "nowrap" }}>{statusLabel}</span>
           <span style={{ opacity: 0.45 }}>|</span>
-          <span style={{ fontSize: 12, color: "#dfe6e9", whiteSpace: "nowrap" }}>
-            {timeLabel}
-          </span>
+          <span style={{ fontSize: 12, color: "#dfe6e9", whiteSpace: "nowrap" }}>{timeLabel}</span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", position: "relative" }}>
-          {availableWorlds.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 11, opacity: 0.72, whiteSpace: "nowrap" }}>Scene</span>
-              <select
-                value={selectedWorldId}
-                onChange={handleWorldChange}
-                disabled={isBusy}
-                style={{ ...selectStyle, maxWidth: 280 }}
-                title="Switch generated world"
-              >
-                {availableWorlds.map((world) => (
-                  <option key={world.id} value={world.id}>
-                    {world.worldName} ({world.id})
-                  </option>
+        {/* Right: selectors + mode toggle + play/pause */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* World selector */}
+          {allWorlds.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: "nowrap" }}>{t("topbar.worldLabel")}</span>
+              <select value={selectedWorldId} onChange={handleWorldChange}
+                disabled={isBusy || inReplayMode} style={{ ...selectStyle, maxWidth: 180 }}>
+                {availableWorlds.length > 0 && (
+                  <optgroup label={t("topbar.myWorlds")}>
+                    {availableWorlds.map((world) => (
+                      <option key={world.id} value={world.id}>{world.worldName}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {libraryWorlds.length > 0 && (
+                  <optgroup label={t("topbar.sampleWorlds")}>
+                    {libraryWorlds.map((world) => (
+                      <option key={world.id} value={world.id}>{world.worldName}</option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+            </div>
+          )}
+
+          {/* Timeline selector */}
+          {timelines.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: "nowrap" }}>{t("topbar.timelineLabel")}</span>
+              <select value={selectedTimelineId} onChange={handleTimelineChange}
+                disabled={isBusy || inReplayMode} style={{ ...selectStyle, maxWidth: 180 }}>
+                {timelines.map((tl, idx) => (
+                  <option key={tl.id} value={tl.id}>{formatTimelineLabel(tl, timelines.length - idx)}</option>
                 ))}
               </select>
-              <button
-                ref={deleteButtonRef}
-                onClick={() => setDeletePopoverOpen((prev) => !prev)}
-                disabled={isBusy || availableWorlds.length === 0}
-                style={iconBtnStyle(deletePopoverOpen)}
-                title="Manage worlds"
-                aria-label="Manage worlds"
-              >
-                🗑
-              </button>
             </div>
           )}
 
-          <button
-            onClick={() => {
-              pauseWorldIfNeeded();
-              navigate("/create");
-            }}
-            disabled={isResetting || isSwitchingWorld}
-            style={newWorldBtnStyle(isResetting || isSwitchingWorld)}
-            title="Create a brand-new world"
-          >
-            ✦ New World
+          <button onClick={() => setManagerModalOpen(true)} disabled={isBusy || inReplayMode}
+            style={{ ...chipBtnStyle(managerModalOpen), opacity: inReplayMode ? 0.5 : 1 }}
+            title={t("topbar.manageTitle")}>
+            {t("topbar.manage")}
           </button>
 
+          <span style={{ width: 1, height: 18, background: "rgba(255,255,255,0.12)", flexShrink: 0 }} />
+
+          {/* Mode toggle: Run / Replay */}
+          <div style={modeToggleContainerStyle}>
+            <button
+              onClick={handleSwitchToRun}
+              disabled={isBusy}
+              style={modeToggleBtnStyle(inRunMode, "run")}
+            >
+              {t("topbar.run")}
+            </button>
+            <button
+              onClick={handleSwitchToReplay}
+              disabled={isBusy || !hasReplayContent}
+              style={{
+                ...modeToggleBtnStyle(inReplayMode, "replay"),
+                opacity: (!hasReplayContent && !inReplayMode) ? 0.4 : 1,
+              }}
+              title={!hasReplayContent ? t("topbar.noReplayData") : t("topbar.switchToReplay")}
+            >
+              {t("topbar.replay")}
+            </button>
+          </div>
+
+          {/* Play / Pause — adapts to mode */}
           <button
             onClick={onToggleAutoPlay}
-            disabled={autoPlayToggleDisabled}
+            disabled={inRunMode ? autoPlayToggleDisabled : false}
             style={{
               ...primaryBtnStyle,
-              background: autoPlayEnabled ? "rgba(116,185,255,0.24)" : "rgba(116,185,255,0.14)",
-              borderColor: "rgba(116,185,255,0.45)",
-              cursor: autoPlayToggleDisabled ? "wait" : "pointer",
-              opacity: autoPlayToggleDisabled ? 0.82 : 1,
+              background: autoPlayEnabled
+                ? (inReplayMode ? "rgba(225,112,85,0.28)" : "rgba(116,185,255,0.24)")
+                : (inReplayMode ? "rgba(225,112,85,0.14)" : "rgba(116,185,255,0.14)"),
+              borderColor: inReplayMode ? "rgba(225,112,85,0.5)" : "rgba(116,185,255,0.45)",
+              cursor: (inRunMode && autoPlayToggleDisabled) ? "wait" : "pointer",
+              opacity: (inRunMode && autoPlayToggleDisabled) ? 0.6 : 1,
+              minWidth: 60,
             }}
           >
-            {autoPlayEnabled ? "Pause" : "Play"}
+            {autoPlayEnabled
+              ? (inReplayMode ? t("topbar.pauseReplay") : t("topbar.pauseRun"))
+              : (inReplayMode ? t("topbar.playReplay") : t("topbar.playRun"))}
           </button>
-
-          {deletePopoverOpen && (
-            <div ref={deletePopoverRef} style={popoverStyle}>
-              <div style={popoverHeaderStyle}>
-                <span style={{ fontWeight: 600 }}>Manage worlds</span>
-                <button
-                  onClick={() => setDeletePopoverOpen(false)}
-                  style={popoverCloseBtnStyle}
-                  aria-label="Close"
-                >
-                  ✕
-                </button>
-              </div>
-              <div style={popoverBodyStyle}>
-                {availableWorlds.length === 0 ? (
-                  <div style={{ opacity: 0.7, fontSize: 12 }}>No generated worlds.</div>
-                ) : (
-                  availableWorlds.map((world) => {
-                    const isActive = world.id === selectedWorldId;
-                    const isDeleting = deletingWorldId === world.id;
-                    return (
-                      <div key={world.id} style={popoverRowStyle}>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={popoverWorldNameStyle}>{world.worldName}</div>
-                          <div style={popoverWorldIdStyle}>{world.id}</div>
-                        </div>
-                        {isActive ? (
-                          <span style={popoverActiveBadgeStyle}>active</span>
-                        ) : (
-                          <button
-                            onClick={() => handleDeleteWorld(world)}
-                            disabled={isDeleting}
-                            style={popoverDeleteBtnStyle(isDeleting)}
-                            title={`Delete "${world.worldName}"`}
-                          >
-                            {isDeleting ? "Deleting…" : "Delete"}
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
-      {/* 第二行：功能入口与调试工具 */}
+      {/* Replay progress bar (only in replay mode) */}
+      {inReplayMode && replayProgress && (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 2px" }}>
+          <span style={{ fontSize: 11, color: "#e17055", fontWeight: 600, whiteSpace: "nowrap" }}>
+            {replayProgress.current}/{replayProgress.total}
+          </span>
+          <div style={{ flex: 1, height: 4, background: "rgba(255,255,255,0.08)", borderRadius: 2, overflow: "hidden" }}>
+            <div style={{
+              height: "100%",
+              width: `${replayProgress.total > 0 ? (replayProgress.current / replayProgress.total) * 100 : 0}%`,
+              background: "linear-gradient(90deg, #e17055, #f39c12)",
+              borderRadius: 2,
+              transition: "width 0.3s ease",
+            }} />
+          </div>
+        </div>
+      )}
+
+      {/* Row 2: feature entries + tools */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-        <button onClick={() => navigate("/graph")} style={chipBtnStyle(false)}>
-          Relations
-        </button>
-        <button onClick={() => navigate("/timeline")} style={chipBtnStyle(false)}>
-          Timeline
-        </button>
+        <button onClick={() => navigate("/graph")} style={chipBtnStyle(false)}>{t("topbar.relations")}</button>
+        <button onClick={() => navigate("/timeline")} style={chipBtnStyle(false)}>{t("topbar.eventLog")}</button>
         <button
           onClick={() => setGodPanelOpen(true)}
-          style={chipBtnStyle(godPanelOpen)}
-          title="向世界广播事件或给某个角色植入记忆"
+          disabled={inReplayMode}
+          style={{ ...chipBtnStyle(godPanelOpen), opacity: inReplayMode ? 0.4 : 1, cursor: inReplayMode ? "not-allowed" : "pointer" }}
+          title={t("topbar.godModeTitle")}
         >
-          👁️ 上帝视角
+          {t("topbar.godMode")}
         </button>
         <button
-          onClick={() => {
-            setSandboxChatOpen(true);
-            pauseWorldIfNeeded();
-          }}
-          style={chipBtnStyle(sandboxChatOpen)}
-          title="把某个角色叫出来单独聊（不进入记忆、不影响世界）"
+          onClick={() => { setSandboxChatOpen(true); pauseWorldIfNeeded(); }}
+          disabled={inReplayMode}
+          style={{ ...chipBtnStyle(sandboxChatOpen), opacity: inReplayMode ? 0.4 : 1, cursor: inReplayMode ? "not-allowed" : "pointer" }}
+          title={t("topbar.sandboxChatTitle")}
         >
-          💬 架空对话
+          {t("topbar.sandboxChat")}
         </button>
 
         <div style={{ flex: 1 }} />
@@ -425,63 +431,55 @@ export function TopBar({
         {isDevMode && (
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 11, opacity: 0.72, whiteSpace: "nowrap" }}>Tick</span>
+              <span style={{ fontSize: 11, opacity: 0.72, whiteSpace: "nowrap" }}>{t("topbar.tickLabel")}</span>
               <select
                 value={String(worldInfo?.sceneConfig.tickDurationMinutes ?? 15)}
                 onChange={handleDevTickGranularityChange}
-                disabled={isBusy}
+                disabled={isBusy || inReplayMode}
                 style={selectStyle}
-                title="Dev-only tick granularity; resets current simulation state"
+                title={t("topbar.tickTitle")}
               >
                 <option value="15">15 min</option>
                 <option value="30">30 min</option>
                 <option value="60">1 h</option>
               </select>
             </div>
+            <button onClick={onToggleWalkableOverlay} style={chipBtnStyle(showWalkableOverlay)}>{t("topbar.devWalkable")}</button>
+            <button onClick={onToggleRegionBoundsOverlay} style={chipBtnStyle(showRegionBoundsOverlay)}>{t("topbar.devRegions")}</button>
+            <button onClick={onToggleMainAreaPointsOverlay} style={chipBtnStyle(showMainAreaPointsOverlay)}>{t("topbar.devPoints")}</button>
+            <button onClick={onToggleInteractiveObjectsOverlay} style={chipBtnStyle(showInteractiveObjectsOverlay)}>{t("topbar.devInteractive")}</button>
+          </>
+        )}
+
+        <LanguageToggle />
+
+        {/* New World + New Timeline: only in run mode */}
+        {inRunMode && (
+          <>
             <button
-              onClick={onToggleWalkableOverlay}
-              style={chipBtnStyle(showWalkableOverlay)}
-              title="显示可行走区域调试图层"
+              onClick={() => { pauseWorldIfNeeded(); navigate("/create"); }}
+              disabled={isResetting || isSwitchingWorld}
+              style={newWorldBtnStyle(isResetting || isSwitchingWorld)}
+              title={t("topbar.newWorldTitle")}
             >
-              可行走区
+              {t("topbar.newWorld")}
             </button>
             <button
-              onClick={onToggleRegionBoundsOverlay}
-              style={chipBtnStyle(showRegionBoundsOverlay)}
-              title="显示功能区边框"
+              onClick={onNewTimeline}
+              disabled={isBusy}
+              style={{
+                ...secondaryBtnStyle,
+                color: "#a3d8ff",
+                borderColor: "rgba(116,185,255,0.4)",
+                background: "rgba(116,185,255,0.12)",
+                cursor: isBusy ? "wait" : "pointer",
+                opacity: isBusy ? 0.7 : 1,
+              }}
             >
-              功能区
-            </button>
-            <button
-              onClick={onToggleMainAreaPointsOverlay}
-              style={chipBtnStyle(showMainAreaPointsOverlay)}
-              title="显示 main_area 点位"
-            >
-              点位
-            </button>
-            <button
-              onClick={onToggleInteractiveObjectsOverlay}
-              style={chipBtnStyle(showInteractiveObjectsOverlay)}
-              title="显示可交互元素边框和名称"
-            >
-              可交互元素
+              {isResetting ? t("topbar.creatingTimeline") : t("topbar.newTimeline")}
             </button>
           </>
         )}
-        <button
-          onClick={onResetWorld}
-          disabled={isBusy}
-          style={{
-            ...secondaryBtnStyle,
-            color: "#ffb0b0",
-            borderColor: "rgba(231,76,60,0.35)",
-            background: "rgba(231,76,60,0.12)",
-            cursor: isBusy ? "wait" : "pointer",
-            opacity: isBusy ? 0.7 : 1,
-          }}
-        >
-          {isResetting ? "Resetting..." : "Reset World"}
-        </button>
       </div>
 
       <style>{`
@@ -498,29 +496,14 @@ export function TopBar({
       `}</style>
 
       {showPauseToast && typeof document !== "undefined" && createPortal(
-        <div
-          style={{
-            position: "fixed",
-            top: 72,
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "rgba(10, 14, 28, 0.95)",
-            border: "1px solid rgba(116,185,255,0.4)",
-            color: "#dff3ff",
-            padding: "8px 16px",
-            borderRadius: 999,
-            fontSize: 13,
-            fontWeight: 500,
-            zIndex: 9999,
-            boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
-            animation: "slideDownFade 3.5s forwards",
-            pointerEvents: "none",
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-          }}
-        >
-          <span>⏸️</span> 已自动暂停主世界运行
+        <div style={{
+          position: "fixed", top: 72, left: "50%", transform: "translateX(-50%)",
+          background: "rgba(10, 14, 28, 0.95)", border: "1px solid rgba(116,185,255,0.4)",
+          color: "#dff3ff", padding: "8px 16px", borderRadius: 999, fontSize: 13, fontWeight: 500,
+          zIndex: 9999, boxShadow: "0 8px 24px rgba(0,0,0,0.4)", animation: "slideDownFade 3.5s forwards",
+          pointerEvents: "none", display: "flex", alignItems: "center", gap: 6,
+        }}>
+          <span>⏸️</span> {t("topbar.pauseToast")}
         </div>,
         document.body
       )}
@@ -531,9 +514,14 @@ export function TopBar({
       {sandboxChatOpen && typeof document !== "undefined"
         ? createPortal(<SandboxChatPanel onClose={() => setSandboxChatOpen(false)} />, document.body)
         : null}
+      {managerModalOpen && typeof document !== "undefined"
+        ? createPortal(<TimelineManagerModal onClose={() => setManagerModalOpen(false)} />, document.body)
+        : null}
     </div>
   );
 }
+
+// --- Styles ---
 
 const primaryBtnStyle: CSSProperties = {
   color: "#fff",
@@ -575,23 +563,6 @@ function chipBtnStyle(active: boolean): CSSProperties {
   };
 }
 
-function iconBtnStyle(active: boolean): CSSProperties {
-  return {
-    background: active ? "rgba(231,76,60,0.18)" : "rgba(255,255,255,0.06)",
-    border: `1px solid ${active ? "rgba(231,76,60,0.5)" : "rgba(255,255,255,0.15)"}`,
-    color: active ? "#ffd2cf" : "#e0e0e0",
-    borderRadius: 999,
-    width: 28,
-    height: 28,
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    fontSize: 13,
-    transition: "all 0.2s",
-  };
-}
-
 function newWorldBtnStyle(disabled: boolean): CSSProperties {
   return {
     background: disabled
@@ -611,94 +582,45 @@ function newWorldBtnStyle(disabled: boolean): CSSProperties {
   };
 }
 
-const popoverStyle: CSSProperties = {
-  position: "absolute",
-  top: "calc(100% + 8px)",
-  right: 0,
-  width: 320,
-  maxHeight: 360,
-  background: "rgba(14, 18, 36, 0.98)",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 12,
-  boxShadow: "0 18px 48px rgba(0,0,0,0.55)",
-  display: "flex",
-  flexDirection: "column",
-  zIndex: 200,
+const modeToggleContainerStyle: CSSProperties = {
+  display: "inline-flex",
+  borderRadius: 999,
+  border: "1px solid rgba(255,255,255,0.15)",
   overflow: "hidden",
-};
-
-const popoverHeaderStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "10px 14px",
-  borderBottom: "1px solid rgba(255,255,255,0.08)",
-  fontSize: 12,
-  color: "#dde4ff",
-};
-
-const popoverCloseBtnStyle: CSSProperties = {
-  background: "transparent",
-  border: "none",
-  color: "#a8b3d4",
-  fontSize: 14,
-  cursor: "pointer",
-  padding: 0,
-  lineHeight: 1,
-};
-
-const popoverBodyStyle: CSSProperties = {
-  padding: "8px 8px 10px",
-  overflowY: "auto",
-  display: "flex",
-  flexDirection: "column",
-  gap: 6,
-};
-
-const popoverRowStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  padding: "8px 10px",
-  borderRadius: 8,
   background: "rgba(255,255,255,0.04)",
 };
 
-const popoverWorldNameStyle: CSSProperties = {
-  fontSize: 13,
-  fontWeight: 600,
-  color: "#e8ecff",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
+function formatTimelineLabel(tl: TimelineMeta, index: number): string {
+  let timeStr = "";
+  if (tl.createdAt) {
+    const d = new Date(tl.createdAt);
+    if (!isNaN(d.getTime())) {
+      const mm = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
+      const hh = String(d.getHours()).padStart(2, "0");
+      const min = String(d.getMinutes()).padStart(2, "0");
+      timeStr = `${mm}/${dd} ${hh}:${min}`;
+    }
+  }
+  const tickLabel = `${tl.tickCount}t`;
+  return timeStr ? `#${index} · ${timeStr} (${tickLabel})` : `#${index} (${tickLabel})`;
+}
 
-const popoverWorldIdStyle: CSSProperties = {
-  fontSize: 11,
-  color: "#7c87ad",
-  whiteSpace: "nowrap",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-};
+function modeToggleBtnStyle(active: boolean, mode: ViewMode): CSSProperties {
+  const colors = mode === "run"
+    ? { activeBg: "rgba(0,184,148,0.22)", activeBorder: "rgba(0,184,148,0.5)", activeColor: "#a3f7bf" }
+    : { activeBg: "rgba(225,112,85,0.22)", activeBorder: "rgba(225,112,85,0.5)", activeColor: "#ffd2cf" };
 
-const popoverActiveBadgeStyle: CSSProperties = {
-  fontSize: 11,
-  color: "#a3f7bf",
-  background: "rgba(76,209,148,0.14)",
-  border: "1px solid rgba(76,209,148,0.4)",
-  borderRadius: 999,
-  padding: "3px 10px",
-};
-
-function popoverDeleteBtnStyle(busy: boolean): CSSProperties {
   return {
-    background: "rgba(231,76,60,0.14)",
-    border: "1px solid rgba(231,76,60,0.45)",
-    color: "#ffd2cf",
-    borderRadius: 999,
-    padding: "4px 12px",
-    fontSize: 11,
-    cursor: busy ? "wait" : "pointer",
-    opacity: busy ? 0.7 : 1,
+    background: active ? colors.activeBg : "transparent",
+    border: "none",
+    borderRight: mode === "run" ? "1px solid rgba(255,255,255,0.1)" : "none",
+    color: active ? colors.activeColor : "rgba(255,255,255,0.55)",
+    padding: "5px 14px",
+    fontSize: 12,
+    fontWeight: active ? 600 : 400,
+    cursor: "pointer",
+    transition: "all 0.2s",
+    whiteSpace: "nowrap",
   };
 }

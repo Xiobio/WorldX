@@ -1,6 +1,8 @@
 import { BrowserRouter, useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { useState, useEffect, useCallback, Component } from "react";
 import type { ReactNode, ErrorInfo } from "react";
+import { createPortal } from "react-dom";
 import Phaser from "phaser";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TopBar } from "./panels/TopBar";
@@ -11,6 +13,7 @@ import { SceneTransition } from "./panels/SceneTransition";
 import { RelationshipGraph } from "./pages/RelationshipGraph";
 import { Timeline } from "./pages/Timeline";
 import { CreateWorldPage } from "./pages/CreateWorldPage";
+import { CreateWorldBackground } from "./pages/CreateWorldBackground";
 import type { SimulationEvent, DialogueEventData, WorldTimeInfo } from "../types/api";
 import { apiClient } from "./services/api-client";
 import type { GeneratedWorldSummary, WorldInfo } from "./services/api-client";
@@ -51,11 +54,15 @@ export function App({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
 }
 
 function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
+  const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+  const backgroundRoot =
+    typeof document === "undefined" ? null : document.getElementById("background-root");
   const isDevMode = new URLSearchParams(location.search).get("dev") === "1";
   const isCreateRoute = location.pathname === "/create";
   const [worldsList, setWorldsList] = useState<GeneratedWorldSummary[] | null>(null);
+  const [hasUserWorlds, setHasUserWorlds] = useState(false);
   const [gameTime, setGameTime] = useState<WorldTimeInfo>({
     day: 1,
     tick: 0,
@@ -69,10 +76,12 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   const [simStatus, setSimStatus] = useState<"idle" | "running" | "paused" | "error">("idle");
   const [autoPlayEnabled, setAutoPlayEnabled] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isReplaying, setIsReplaying] = useState(false);
+  const [replayProgress, setReplayProgress] = useState<{ current: number; total: number } | null>(null);
   const [dialogueEvents, setDialogueEvents] = useState<SimulationEvent[]>([]);
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
-  const [transitionDay, setTransitionDay] = useState<number | null>(null);
-  const [lastKnownDay, setLastKnownDay] = useState(1);
+  const [transitionPhase, setTransitionPhase] = useState<"hidden" | "ending" | "starting" | "fade-out">("hidden");
+  const [lastKnownDay, setLastKnownDay] = useState(0);
   const [topBarHeight, setTopBarHeight] = useState(DEFAULT_TOP_BAR_HEIGHT);
   const [showWalkableOverlay, setShowWalkableOverlay] = useState(false);
   const [showRegionBoundsOverlay, setShowRegionBoundsOverlay] = useState(false);
@@ -83,9 +92,15 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   const hideMainChrome = isOverlayRoute || isCreateRoute;
   const ticksPerScene = worldInfo?.sceneRuntime.cycleTicks ?? 48;
   const showDayTransition = worldInfo?.sceneRuntime.transitionEnabled ?? false;
-  const transitionTitle =
-    worldInfo?.sceneConfig.multiDay.dayTransitionText ||
-    (worldInfo?.sceneConfig.sceneType === "open" ? "夜色缓缓换了一幕" : "新的一天开始了");
+  const endTransitionTitle =
+    worldInfo?.sceneConfig.multiDay.endOfDayText || t("app.defaultEndTransition");
+  const startTransitionTitle =
+    worldInfo?.sceneConfig.multiDay.newDayText ||
+    (worldInfo?.sceneConfig.sceneType === "open" ? t("app.defaultStartTransitionOpen") : t("app.defaultStartTransitionClosed"));
+
+  useEffect(() => {
+    eventBus.emit("set_cycle_ticks", ticksPerScene);
+  }, [ticksPerScene, eventBus]);
 
   useEffect(() => {
     const topOffset = hideMainChrome ? 0 : Math.max(topBarHeight, DEFAULT_TOP_BAR_HEIGHT);
@@ -103,12 +118,26 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   useEffect(() => {
     const gameRoot = document.getElementById("game-root");
     const labelRoot = document.getElementById("label-root");
-    const display = isCreateRoute ? "none" : "";
-    if (gameRoot) gameRoot.style.display = display;
-    if (labelRoot) labelRoot.style.display = display;
+    const hidden = isCreateRoute;
+    // Keep layout dimensions intact while hiding the roots. Phaser's RESIZE mode
+    // can emit framebuffer errors if we force a resize while the parent is display:none.
+    if (gameRoot) {
+      gameRoot.style.visibility = hidden ? "hidden" : "";
+      gameRoot.style.opacity = hidden ? "0" : "";
+    }
+    if (labelRoot) {
+      labelRoot.style.visibility = hidden ? "hidden" : "";
+      labelRoot.style.opacity = hidden ? "0" : "";
+    }
     return () => {
-      if (gameRoot) gameRoot.style.display = "";
-      if (labelRoot) labelRoot.style.display = "";
+      if (gameRoot) {
+        gameRoot.style.visibility = "";
+        gameRoot.style.opacity = "";
+      }
+      if (labelRoot) {
+        labelRoot.style.visibility = "";
+        labelRoot.style.opacity = "";
+      }
     };
   }, [isCreateRoute]);
 
@@ -119,12 +148,15 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
     apiClient.getGeneratedWorlds()
       .then((response) => {
         if (cancelled) return;
-        setWorldsList(response.worlds);
+        const all = [...response.worlds, ...(response.libraryWorlds ?? [])];
+        setWorldsList(all);
+        setHasUserWorlds(response.worlds.length > 0);
       })
       .catch((error) => {
         if (cancelled) return;
         console.warn("[App] Failed to load generated worlds list:", error);
         setWorldsList([]);
+        setHasUserWorlds(false);
       });
     return () => {
       cancelled = true;
@@ -163,21 +195,43 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   }, [eventBus, isDevMode, showInteractiveObjectsOverlay]);
 
   useEffect(() => {
+    if (lastKnownDay === 0) {
+      if (gameTime.day > 0) setLastKnownDay(gameTime.day);
+      return;
+    }
+
     if (!showDayTransition) {
-      if (transitionDay !== null) setTransitionDay(null);
-      if (lastKnownDay !== gameTime.day) setLastKnownDay(gameTime.day);
+      if (transitionPhase !== "hidden") setTransitionPhase("hidden");
+      if (lastKnownDay !== gameTime.day) {
+        setLastKnownDay(gameTime.day);
+        eventBus.emit("scene_sync_characters");
+      }
       return;
     }
 
     if (gameTime.day > lastKnownDay) {
-      setTransitionDay(gameTime.day);
       setLastKnownDay(gameTime.day);
-      return;
-    }
-    if (gameTime.day < lastKnownDay) {
+      setTransitionPhase("starting");
+      eventBus.emit("scene_sync_characters");
+      
+      setTimeout(() => {
+        setTransitionPhase("fade-out");
+        setTimeout(() => setTransitionPhase("hidden"), 1500);
+      }, 3000);
+    } else if (gameTime.day < lastKnownDay) {
       setLastKnownDay(gameTime.day);
     }
-  }, [gameTime.day, lastKnownDay, showDayTransition, transitionDay]);
+  }, [gameTime.day, lastKnownDay, showDayTransition, transitionPhase, eventBus]);
+
+  useEffect(() => {
+    const onSceneEnding = () => {
+      setTransitionPhase("ending");
+    };
+    eventBus.on("scene_ending", onSceneEnding);
+    return () => {
+      eventBus.off("scene_ending", onSceneEnding);
+    };
+  }, [eventBus]);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,6 +274,16 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
     const onPlaybackState = (payload: { autoPlay?: boolean }) => {
       if (payload.autoPlay != null) setAutoPlayEnabled(payload.autoPlay);
     };
+    const onReplayMode = (payload: { active: boolean }) => {
+      setIsReplaying(payload.active);
+      if (!payload.active) setReplayProgress(null);
+    };
+    const onReplayProgress = (payload: { current: number; total: number }) => {
+      setReplayProgress(payload);
+    };
+    const onReplayFinished = () => {
+      setIsReplaying(false);
+    };
 
     eventBus.on("time_update", onTimeUpdate);
     eventBus.on("character_clicked", onCharClick);
@@ -227,6 +291,9 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
     eventBus.on("simulation_status", onSimStatus);
     eventBus.on("dialogue", onDialogue);
     eventBus.on("playback_state", onPlaybackState);
+    eventBus.on("set_replay_mode", onReplayMode);
+    eventBus.on("replay_progress", onReplayProgress);
+    eventBus.on("replay_finished", onReplayFinished);
 
     return () => {
       eventBus.off("time_update", onTimeUpdate);
@@ -235,6 +302,9 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
       eventBus.off("simulation_status", onSimStatus);
       eventBus.off("dialogue", onDialogue);
       eventBus.off("playback_state", onPlaybackState);
+      eventBus.off("set_replay_mode", onReplayMode);
+      eventBus.off("replay_progress", onReplayProgress);
+      eventBus.off("replay_finished", onReplayFinished);
     };
   }, [eventBus]);
 
@@ -243,22 +313,30 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
     eventBus.emit("set_auto_play", !autoPlayEnabled);
   }, [autoPlayEnabled, eventBus]);
 
-  const handleResetWorld = useCallback(async () => {
-    const confirmed = window.confirm(
-      "This will reset all simulation state (time, events, memories, relationships). Continue?",
-    );
+  const handleNewTimeline = useCallback(async () => {
+    const confirmed = window.confirm(t("app.confirmNewTimeline"));
     if (!confirmed) return;
 
     setIsResetting(true);
     try {
-      await apiClient.resetWorld();
+      await apiClient.createNewTimeline();
       window.location.reload();
     } catch (error) {
-      console.warn("[App] Failed to reset world:", error);
-      window.alert(`Reset failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.warn("[App] Failed to create new timeline:", error);
+      window.alert(t("app.failedPrefix", { error: error instanceof Error ? error.message : String(error) }));
       setIsResetting(false);
     }
-  }, []);
+  }, [t]);
+
+  const handleStartReplay = useCallback(() => {
+    const timelineId = worldInfo?.currentTimelineId;
+    if (!timelineId) return;
+    eventBus.emit("start_replay", timelineId);
+  }, [eventBus, worldInfo?.currentTimelineId]);
+
+  const handleStopReplay = useCallback(() => {
+    eventBus.emit("stop_replay");
+  }, [eventBus]);
 
   const handleToggleFollowChar = useCallback(
     (id: string) => {
@@ -294,14 +372,17 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   if (isCreateRoute) {
     return (
       <div style={{ width: "100%", height: "100%", pointerEvents: "auto" }}>
-        <CreateWorldPage hasExistingWorlds={(worldsList?.length ?? 0) > 0} />
+        <CreateWorldPage hasExistingWorlds={hasUserWorlds} />
       </div>
     );
   }
 
   return (
-    <div style={{ width: "100%", height: "100%", pointerEvents: "none" }}>
-      {!hideMainChrome && (
+    <>
+      {backgroundRoot &&
+        createPortal(<CreateWorldBackground intensity="calm" />, backgroundRoot)}
+      <div style={{ width: "100%", height: "100%", pointerEvents: "none" }}>
+        {!hideMainChrome && (
         <>
           <TopBar
             worldInfo={worldInfo}
@@ -316,10 +397,14 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
             onToggleMainAreaPointsOverlay={() => setShowMainAreaPointsOverlay((prev) => !prev)}
             onToggleInteractiveObjectsOverlay={() => setShowInteractiveObjectsOverlay((prev) => !prev)}
             onToggleAutoPlay={handleToggleAutoPlay}
-            onResetWorld={handleResetWorld}
+            onNewTimeline={handleNewTimeline}
             simStatus={simStatus}
             autoPlayEnabled={autoPlayEnabled}
             isResetting={isResetting}
+            isReplaying={isReplaying}
+            replayProgress={replayProgress}
+            onStartReplay={handleStartReplay}
+            onStopReplay={handleStopReplay}
             onHeightChange={setTopBarHeight}
           />
           <SidePanel
@@ -341,17 +426,18 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
           />
           <MapControls eventBus={eventBus} />
           <SceneTransition
-            day={transitionDay ?? 1}
-            visible={transitionDay !== null}
-            title={transitionTitle}
-            timeString={gameTime.timeString || worldInfo?.sceneConfig.multiDay.nextDayStartTime}
-            periodLabel={gameTime.period}
+            day={gameTime.day + (transitionPhase === "ending" ? 1 : 0)}
+            phase={transitionPhase}
+            title={transitionPhase === "ending" ? endTransitionTitle : startTransitionTitle}
+            timeString={transitionPhase === "ending" ? "" : (gameTime.timeString || worldInfo?.sceneConfig.multiDay.nextDayStartTime)}
+            periodLabel={transitionPhase === "ending" ? "" : gameTime.period}
             variant={worldInfo?.sceneConfig.sceneType === "open" ? "open" : "closed"}
-            onComplete={() => setTransitionDay(null)}
+            onCovered={() => eventBus.emit("scene_covered")}
           />
         </>
-      )}
-      {overlay}
-    </div>
+        )}
+        {overlay}
+      </div>
+    </>
   );
 }

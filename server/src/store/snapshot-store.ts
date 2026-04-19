@@ -13,13 +13,20 @@ export interface SnapshotMeta {
   createdAt: string;
 }
 
-const SNAPSHOTS_DIR = path.resolve("data/snapshots");
+function getSnapshotsDir(): string {
+  try {
+    return path.join(path.dirname(getDbPath()), "snapshots");
+  } catch {
+    return path.resolve("data/snapshots");
+  }
+}
 
 function ensureDir(dir: string): void {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
 export function createSnapshot(gameTime: GameTime, description?: string): string {
+  const SNAPSHOTS_DIR = getSnapshotsDir();
   ensureDir(SNAPSHOTS_DIR);
 
   const id = generateId();

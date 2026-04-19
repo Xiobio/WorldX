@@ -6,11 +6,11 @@ import { PromptBuilder } from "../llm/prompt-builder.js";
 import { SimulationEngine } from "../simulation/simulation-engine.js";
 import { DecisionMaker } from "../simulation/decision-maker.js";
 import { DialogueGenerator } from "../simulation/dialogue-generator.js";
-import { initDatabase } from "../store/db.js";
-import { getDb } from "../store/db.js";
-import * as snapshotStore from "../store/snapshot-store.js";
+import { initDatabase, closeDb } from "../store/db.js";
 import { reloadConfigs } from "../utils/config-loader.js";
+import { TimelineManager } from "./timeline-manager.js";
 import type { SceneConfig } from "../types/index.js";
+import type { InitFrameCharacter } from "./timeline-manager.js";
 
 export class AppContext {
   worldManager!: WorldManager;
@@ -20,22 +20,30 @@ export class AppContext {
   decisionMaker!: DecisionMaker;
   dialogueGenerator!: DialogueGenerator;
   simulationEngine!: SimulationEngine;
+  timelineManager = new TimelineManager();
 
   eventBus = new EventEmitter();
 
   private worldDirPath?: string;
   private sceneConfigOverride: Partial<SceneConfig> | null = null;
-
   private _initialized = false;
+  private tickEventsHandlerRegistered = false;
 
   async initialize(worldDirPath?: string): Promise<void> {
     this.worldDirPath = worldDirPath;
-    initDatabase();
+
     if (worldDirPath) {
+      const timelineId = this.timelineManager.initialize(worldDirPath);
+      const dbPath = this.timelineManager.getTimelineDbPath(worldDirPath, timelineId);
+      initDatabase(dbPath);
       this.rebuildRuntime();
+      this.beginRecording();
     } else {
+      initDatabase();
       this.buildMinimalRuntime();
     }
+
+    this.registerTickEventsHandler();
     this._initialized = true;
   }
 
@@ -47,19 +55,56 @@ export class AppContext {
     return this.worldDirPath;
   }
 
-  resetWorldState(): void {
-    this.clearPersistedState();
+  switchWorld(worldDirPath: string): void {
+    this.timelineManager.stopRecording();
+    closeDb();
+
+    this.worldDirPath = worldDirPath;
     reloadConfigs();
+
+    const timelineId = this.timelineManager.initialize(worldDirPath);
+    const dbPath = this.timelineManager.getTimelineDbPath(worldDirPath, timelineId);
+    initDatabase(dbPath);
+
     this.rebuildRuntime();
+    this.beginRecording();
     this.eventBus.emit("simulation_status", { status: "idle" });
   }
 
-  switchWorld(worldDirPath: string): void {
-    this.worldDirPath = worldDirPath;
-    this.clearPersistedState();
+  switchTimeline(timelineId: string): void {
+    if (!this.worldDirPath) return;
+
+    this.timelineManager.stopRecording();
+    closeDb();
+
+    this.timelineManager.initialize(this.worldDirPath, timelineId);
+    const dbPath = this.timelineManager.getTimelineDbPath(this.worldDirPath, timelineId);
+    initDatabase(dbPath);
+
     reloadConfigs();
     this.rebuildRuntime();
+    this.beginRecording();
     this.eventBus.emit("simulation_status", { status: "idle" });
+  }
+
+  createNewTimeline(): void {
+    if (!this.worldDirPath) return;
+
+    this.timelineManager.stopRecording();
+    closeDb();
+
+    const newId = this.timelineManager.createTimeline(this.worldDirPath);
+    const dbPath = this.timelineManager.getTimelineDbPath(this.worldDirPath, newId);
+    initDatabase(dbPath);
+
+    reloadConfigs();
+    this.rebuildRuntime();
+    this.beginRecording();
+    this.eventBus.emit("simulation_status", { status: "idle" });
+  }
+
+  resetWorldState(): void {
+    this.createNewTimeline();
   }
 
   setDevTickDurationMinutes(minutes: number): void {
@@ -67,29 +112,34 @@ export class AppContext {
       ...(this.sceneConfigOverride ?? {}),
       tickDurationMinutes: minutes,
     };
-    this.clearPersistedState();
-    reloadConfigs();
-    this.rebuildRuntime();
-    this.eventBus.emit("simulation_status", { status: "idle" });
+    this.createNewTimeline();
   }
 
-  private clearPersistedState(): void {
-    for (const snapshot of snapshotStore.listSnapshots()) {
-      snapshotStore.deleteSnapshot(snapshot.id);
-    }
+  private beginRecording(): void {
+    const characters = this.getInitFrameCharacters();
+    this.timelineManager.startRecording(characters);
+  }
 
-    getDb().exec(`
-      DELETE FROM events;
-      DELETE FROM memories;
-      DELETE FROM relationships;
-      DELETE FROM character_states;
-      DELETE FROM world_object_states;
-      DELETE FROM world_global_state;
-      DELETE FROM diary_entries;
-      DELETE FROM snapshots;
-      DELETE FROM llm_call_logs;
-      DELETE FROM content_candidates;
-    `);
+  private getInitFrameCharacters(): InitFrameCharacter[] {
+    if (!this.characterManager) return [];
+    return this.characterManager.getAllProfiles().map((profile) => {
+      const state = this.characterManager.getState(profile.id);
+      return {
+        id: profile.id,
+        name: profile.name,
+        location: state?.location ?? "",
+        mainAreaPointId: state?.mainAreaPointId ?? null,
+      };
+    });
+  }
+
+  private registerTickEventsHandler(): void {
+    if (this.tickEventsHandlerRegistered) return;
+    this.tickEventsHandlerRegistered = true;
+
+    this.eventBus.on("tick_events", ({ gameTime, events }) => {
+      this.timelineManager.appendTickEvents(gameTime, events);
+    });
   }
 
   private buildMinimalRuntime(): void {
@@ -122,6 +172,7 @@ export class AppContext {
       this.promptBuilder = new PromptBuilder();
       this.promptBuilder.initialize();
     }
+    this.promptBuilder.setContentLanguage(this.worldManager.getContentLanguage());
 
     this.decisionMaker = new DecisionMaker(
       this.llmClient,

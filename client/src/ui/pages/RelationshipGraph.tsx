@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Network } from "vis-network";
+import { useTranslation } from "react-i18next";
+import { Network, type Node } from "vis-network";
 import { DataSet } from "vis-data";
 import { apiClient } from "../services/api-client";
 import type { GraphData } from "../../types/api";
-import { MBTI_COLORS } from "../../config/game-config";
+import { MBTI_COLORS, CHARACTER_COLORS } from "../../config/game-config";
 
 const LABEL_COLORS: Record<string, string> = {
   friend: "#00b894",
@@ -26,6 +27,7 @@ function formatGeneratedAt(value: GraphData["generatedAt"]): string {
 
 export function RelationshipGraph() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
   const [data, setData] = useState<GraphData | null>(null);
@@ -35,9 +37,9 @@ export function RelationshipGraph() {
   useEffect(() => {
     apiClient.getGraph().then(setData).catch((err) => {
       console.warn("[RelationshipGraph] Failed to load graph:", err);
-      setError("加载关系图失败，请先运行至少一天的模拟。");
+      setError(t("graph.loadError"));
     });
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -58,19 +60,26 @@ export function RelationshipGraph() {
     }
 
     try {
-      const nodes = new DataSet(
-        data.nodes.map((n) => ({
-          id: n.id,
-          label: `${n.name}\n(${n.mbti})`,
-          color: {
-            background: `#${(MBTI_COLORS[n.mbti] || 0xcccccc).toString(16).padStart(6, "0")}`,
-            border: "#ffffff44",
-            highlight: { background: "#fff", border: "#fff" },
-          },
-          font: { color: "#e0e0e0", size: 12 },
-          shape: "dot",
-          size: 18,
-        }))
+      const nodes = new DataSet<Node>(
+        data.nodes.map((n) => {
+          const nameHash = n.name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
+          const colorVal = MBTI_COLORS[n.mbti] || CHARACTER_COLORS[nameHash % CHARACTER_COLORS.length];
+          return {
+            id: n.id,
+            label: n.mbti && n.mbti !== "NPC" ? `${n.name}\n(${n.mbti})` : n.name,
+            color: {
+              background: `#${colorVal.toString(16).padStart(6, "0")}`,
+              border: "#ffffff44",
+              highlight: { background: "#fff", border: "#fff" },
+            },
+            font: { color: "#ffffff", size: 14 },
+            shape: "box",
+            margin: { top: 10, bottom: 10, left: 15, right: 15 },
+            borderWidth: 1,
+            shadow: { enabled: true, color: "rgba(0,0,0,0.4)", size: 10, x: 0, y: 4 },
+            shapeProperties: { borderRadius: 8 },
+          };
+        })
       );
 
       const edges = new DataSet(
@@ -98,7 +107,7 @@ export function RelationshipGraph() {
       });
     } catch (err) {
       console.warn("[RelationshipGraph] vis-network error:", err);
-      setError("关系图渲染失败");
+      setError(t("graph.renderError"));
     }
 
     return () => {
@@ -171,7 +180,7 @@ export function RelationshipGraph() {
             pointerEvents: "auto",
           }}
         >
-          ← 返回小镇
+          {t("graph.backToWorld")}
         </button>
         <h2
           style={{
@@ -185,7 +194,7 @@ export function RelationshipGraph() {
             pointerEvents: "none",
           }}
         >
-          关系图谱
+          {t("graph.title")}
           {generatedAtLabel && (
             <span style={{ fontSize: 11, color: "#888", marginLeft: 8 }}>
               {generatedAtLabel}

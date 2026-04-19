@@ -1,41 +1,44 @@
+import i18n from "../../i18n";
 import type { CharacterInfo, LocationInfo, SimulationEvent } from "../../types/api";
 
-const EVENT_TYPE_LABELS: Record<string, string> = {
-  dialogue: "对话",
-  movement: "移动",
-  action_start: "开始行动",
-  action_end: "结束行动",
-  event_triggered: "事件触发",
-  emotion_shift: "状态变化",
-  reflection: "反思",
-  memory_formed: "形成记忆",
+const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, opts);
+
+const EVENT_TYPE_KEY_MAP: Record<string, string> = {
+  dialogue: "eventFormat.typeDialogue",
+  movement: "eventFormat.typeMovement",
+  action_start: "eventFormat.typeActionStart",
+  action_end: "eventFormat.typeActionEnd",
+  event_triggered: "eventFormat.typeEventTriggered",
+  emotion_shift: "eventFormat.typeEmotionShift",
+  reflection: "eventFormat.typeReflection",
+  memory_formed: "eventFormat.typeMemoryFormed",
 };
 
-const ACTION_LABELS: Record<string, string> = {
-  sleep: "睡觉",
-  cook: "做饭",
-  eat: "吃饭",
-  read: "阅读",
-  read_bulletin: "看公告",
-  write_diary: "写日记",
-  talk: "聊天",
-  in_conversation: "对话中",
-  traveling: "移动中",
-  idle: "发呆",
-  fish: "钓鱼",
-  explore: "探索",
-  repair: "修理",
-  think_in_bed: "躺床上思考",
-  lock_door: "锁门",
-  unlock_door: "开锁",
-  people_watch: "闲坐观望",
-  use_computer: "使用电脑",
-  have_drink: "喝饮料",
-  craft: "做手工",
-  stroll: "散步",
-  tend_garden: "打理花园",
-  post_message: "张贴留言",
-  move_within_main_area: "在主区域换位置",
+const ACTION_KEY_MAP: Record<string, string> = {
+  sleep: "eventFormat.actionSleep",
+  cook: "eventFormat.actionCook",
+  eat: "eventFormat.actionEat",
+  read: "eventFormat.actionRead",
+  read_bulletin: "eventFormat.actionReadBulletin",
+  write_diary: "eventFormat.actionWriteDiary",
+  talk: "eventFormat.actionTalk",
+  in_conversation: "eventFormat.actionInConversation",
+  traveling: "eventFormat.actionTraveling",
+  idle: "eventFormat.actionIdle",
+  fish: "eventFormat.actionFish",
+  explore: "eventFormat.actionExplore",
+  repair: "eventFormat.actionRepair",
+  think_in_bed: "eventFormat.actionThinkInBed",
+  lock_door: "eventFormat.actionLockDoor",
+  unlock_door: "eventFormat.actionUnlockDoor",
+  people_watch: "eventFormat.actionPeopleWatch",
+  use_computer: "eventFormat.actionUseComputer",
+  have_drink: "eventFormat.actionHaveDrink",
+  craft: "eventFormat.actionCraft",
+  stroll: "eventFormat.actionStroll",
+  tend_garden: "eventFormat.actionTendGarden",
+  post_message: "eventFormat.actionPostMessage",
+  move_within_main_area: "eventFormat.actionMoveWithinMainArea",
 };
 
 type EventFormatContext = {
@@ -52,7 +55,8 @@ export function buildLocationNameMap(locations: LocationInfo[]): Record<string, 
 }
 
 export function formatEventType(type: string): string {
-  return EVENT_TYPE_LABELS[type] || prettifyToken(type);
+  const key = EVENT_TYPE_KEY_MAP[type];
+  return key ? t(key) : prettifyToken(type);
 }
 
 export function formatEventSummary(
@@ -69,37 +73,47 @@ export function formatEventSummary(
   switch (event.type) {
     case "movement": {
       if (event.data?.actionType === "move_within_main_area") {
-        return actorName ? `${actorName} 在主区域换了个地方活动` : "在主区域换了个地方活动";
+        return actorName
+          ? t("eventFormat.moveWithinMainArea", { name: actorName })
+          : t("eventFormat.moveWithinMainAreaNoName");
       }
       const destination = formatLocationName(
         event.data?.to ?? event.data?.toLocation ?? event.location,
         context.locationNames,
       );
-      return actorName ? `${actorName} 前往 ${destination}` : `前往 ${destination}`;
+      return actorName
+        ? t("eventFormat.moveTo", { name: actorName, destination })
+        : t("eventFormat.moveToNoName", { destination });
     }
     case "action_start":
-      if (actorName && currentLocation !== "某处") {
-        return `${actorName} 在${currentLocation}开始${actionName}`;
+      if (actorName && currentLocation !== t("eventFormat.unknownLocation")) {
+        return t("eventFormat.actionStartAtLocation", { name: actorName, location: currentLocation, action: actionName });
       }
-      return actorName ? `${actorName} 开始${actionName}` : `开始${actionName}`;
+      return actorName
+        ? t("eventFormat.actionStartSimple", { name: actorName, action: actionName })
+        : t("eventFormat.actionStartNoName", { action: actionName });
     case "action_end":
-      return actorName ? `${actorName} 结束${actionName}` : `结束${actionName}`;
+      return actorName
+        ? t("eventFormat.actionEndSimple", { name: actorName, action: actionName })
+        : t("eventFormat.actionEndNoName", { action: actionName });
     case "dialogue": {
       const phase = event.data?.phase;
       const turnCount = event.data?.turns?.length || 0;
       if (phase === "turn") {
         const preview = event.data?.turns?.[0]?.content;
         if (actorName && targetName && preview) {
-          return `${actorName} 对 ${targetName} 说：“${preview}”`;
+          return t("eventFormat.dialogueTurnPreview", { name: actorName, target: targetName, preview });
         }
-        return actorName ? `${actorName} 说了一句` : "出现了一句对话";
+        return actorName
+          ? t("eventFormat.dialogueTurnSimple", { name: actorName })
+          : t("eventFormat.dialogueTurnNoName");
       }
       if (actorName && targetName) {
-        return `${actorName} 与 ${targetName} 对话结束（${turnCount}句）`;
+        return t("eventFormat.dialogueComplete", { name: actorName, target: targetName, count: turnCount });
       }
       return actorName
-        ? `${actorName} 完成一段对话（${turnCount}句）`
-        : `发生对话（${turnCount}句）`;
+        ? t("eventFormat.dialogueCompleteOneParty", { name: actorName, count: turnCount })
+        : t("eventFormat.dialogueCompleteNoName", { count: turnCount });
     }
     case "emotion_shift": {
       const needName = formatNeedName(event.data?.urgentNeed);
@@ -107,19 +121,23 @@ export function formatEventSummary(
         typeof event.data?.value === "number" ? Math.round(event.data.value) : null;
       if (actorName) {
         return value == null
-          ? `${actorName} 的${needName}变得紧迫`
-          : `${actorName} 的${needName}变得紧迫（${value}/100）`;
+          ? t("eventFormat.emotionUrgent", { name: actorName, need: needName })
+          : t("eventFormat.emotionUrgentWithValue", { name: actorName, need: needName, value });
       }
-      return `${needName}变得紧迫`;
+      return t("eventFormat.emotionUrgentNoName", { need: needName });
     }
     case "reflection":
-      return actorName ? `${actorName} 进行了一次反思` : "有人进行了一次反思";
+      return actorName
+        ? t("eventFormat.reflectionDone", { name: actorName })
+        : t("eventFormat.reflectionNoName");
     case "memory_formed":
-      return actorName ? `${actorName} 记下了一件事` : "有人形成了一段记忆";
+      return actorName
+        ? t("eventFormat.memoryFormed", { name: actorName })
+        : t("eventFormat.memoryNoName");
     case "event_triggered":
-      return event.data?.title || event.data?.name || event.data?.summary || "触发了一条剧情事件";
+      return event.data?.title || event.data?.name || event.data?.summary || t("eventFormat.eventTriggeredFallback");
     default:
-      if (actorName) return `${actorName}：${summarizePayload(event.data)}`;
+      if (actorName) return `${actorName}: ${summarizePayload(event.data)}`;
       return summarizePayload(event.data);
   }
 }
@@ -136,26 +154,27 @@ function formatLocationName(
   locationId: string | undefined,
   nameMap: Record<string, string> | undefined,
 ): string {
-  if (!locationId) return "某处";
+  if (!locationId) return t("eventFormat.unknownLocation");
   return nameMap?.[locationId] || prettifyToken(locationId);
 }
 
 export function formatActionName(action: string | undefined): string {
-  if (!action) return "行动";
-  return ACTION_LABELS[action] || prettifyToken(action);
+  if (!action) return t("eventFormat.defaultAction");
+  const key = ACTION_KEY_MAP[action];
+  return key ? t(key) : prettifyToken(action);
 }
 
 function summarizePayload(payload: unknown): string {
-  if (!payload || typeof payload !== "object") return "发生了一件事";
+  if (!payload || typeof payload !== "object") return t("eventFormat.defaultSummary");
   const namedPayload = payload as Record<string, unknown>;
   if (typeof namedPayload.summary === "string") return namedPayload.summary;
   if (typeof namedPayload.actionName === "string") return namedPayload.actionName;
   if (typeof namedPayload.interactionName === "string") return namedPayload.interactionName;
   if (typeof namedPayload.action === "string") return formatActionName(namedPayload.action);
   if (typeof namedPayload.interactionId === "string") return formatActionName(namedPayload.interactionId);
-  if (typeof namedPayload.toLocation === "string") return `前往 ${prettifyToken(namedPayload.toLocation)}`;
-  if (typeof namedPayload.to === "string") return `前往 ${prettifyToken(namedPayload.to)}`;
-  return "发生了一件事";
+  if (typeof namedPayload.toLocation === "string") return t("eventFormat.moveToNoName", { destination: prettifyToken(namedPayload.toLocation) });
+  if (typeof namedPayload.to === "string") return t("eventFormat.moveToNoName", { destination: prettifyToken(namedPayload.to) });
+  return t("eventFormat.defaultSummary");
 }
 
 function prettifyToken(token: string): string {
@@ -166,10 +185,6 @@ function prettifyToken(token: string): string {
 }
 
 function formatNeedName(need: unknown): string {
-  switch (need) {
-    case "curiosity":
-      return "好奇心";
-    default:
-      return typeof need === "string" ? prettifyToken(need) : "某项状态";
-  }
+  if (need === "curiosity") return t("eventFormat.needCuriosity");
+  return typeof need === "string" ? prettifyToken(need) : t("eventFormat.needDefault");
 }

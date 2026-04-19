@@ -44,6 +44,7 @@ export class WorldScene extends Phaser.Scene {
   private mainAreaPointsOverlay: Phaser.GameObjects.Graphics | null = null;
   private interactiveObjectsOverlay: Phaser.GameObjects.Container | null = null;
   private lastObservedDay: number | null = null;
+  private isReplaying = false;
   private tickPlaybackActive = false;
   private tickPlaybackEventsFlushed = false;
   private pendingPlaybackAsyncOps = 0;
@@ -113,17 +114,35 @@ export class WorldScene extends Phaser.Scene {
       this.playbackController.devAdvanceTick();
     });
     this.eventBus.on("set_auto_play", (enabled: boolean) => {
-      this.playbackController.setAutoPlay(enabled);
+      if (this.playbackController.getMode() === "replay") {
+        this.playbackController.setReplayAutoPlay(enabled);
+      } else {
+        this.playbackController.setAutoPlay(enabled);
+      }
     });
     this.eventBus.on("set_tick_interval", (intervalMs: number) => {
       this.playbackController.setTickIntervalMs(intervalMs);
     });
+    this.eventBus.on("set_cycle_ticks", (cycleTicks: number) => {
+      this.playbackController.setCycleTicks(cycleTicks);
+    });
+    this.eventBus.on("start_replay", (timelineId: string) => {
+      void this.playbackController.startReplay(timelineId);
+    });
+    this.eventBus.on("stop_replay", () => {
+      this.playbackController.stopReplay();
+    });
+    this.eventBus.on("set_replay_mode", (payload: { active: boolean }) => {
+      this.isReplaying = payload.active;
+    });
+    this.eventBus.on("replay_init", (initFrame: any) => {
+      this.handleReplayInit(initFrame);
+    });
     const onTimeUpdate = (time: { day: number }) => {
-      const previousDay = this.lastObservedDay;
       this.lastObservedDay = time.day;
-      if (previousDay != null && time.day > previousDay) {
-        void this.trackPlaybackAsync(this.handleSceneDayChange());
-      }
+    };
+    const onSceneSyncCharacters = () => {
+      void this.trackPlaybackAsync(this.handleSceneDayChange());
     };
     const onTickPlaybackStarted = () => {
       this.tickPlaybackActive = true;
@@ -154,6 +173,7 @@ export class WorldScene extends Phaser.Scene {
     this.eventBus.on("toggle_debug_main_area_points_overlay", onToggleMainAreaPointsOverlay);
     this.eventBus.on("toggle_debug_interactive_objects_overlay", onToggleInteractiveObjectsOverlay);
     this.eventBus.on("time_update", onTimeUpdate);
+    this.eventBus.on("scene_sync_characters", onSceneSyncCharacters);
     this.eventBus.on("tick_playback_started", onTickPlaybackStarted);
     this.eventBus.on("tick_playback_events_flushed", onTickPlaybackEventsFlushed);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
@@ -162,6 +182,7 @@ export class WorldScene extends Phaser.Scene {
       this.eventBus.off("toggle_debug_main_area_points_overlay", onToggleMainAreaPointsOverlay);
       this.eventBus.off("toggle_debug_interactive_objects_overlay", onToggleInteractiveObjectsOverlay);
       this.eventBus.off("time_update", onTimeUpdate);
+      this.eventBus.off("scene_sync_characters", onSceneSyncCharacters);
       this.eventBus.off("tick_playback_started", onTickPlaybackStarted);
       this.eventBus.off("tick_playback_events_flushed", onTickPlaybackEventsFlushed);
     });
@@ -197,6 +218,50 @@ export class WorldScene extends Phaser.Scene {
 
   private async initCharacters() {
     await this.syncCharactersFromServer();
+  }
+
+  private handleReplayInit(initFrame: { characters: { id: string; name: string; location: string; mainAreaPointId: string | null }[] }) {
+    const displayMetrics = createCharacterDisplayMetrics(this.mapPixelWidth, this.mapPixelHeight);
+    const zoom = this.cameras.main.zoom;
+    const mainAreaOccupants = new Map<string, string[]>();
+
+    for (const char of initFrame.characters) {
+      if (char.location !== "main_area" || !char.mainAreaPointId) continue;
+      const occupants = mainAreaOccupants.get(char.mainAreaPointId) ?? [];
+      occupants.push(char.id);
+      mainAreaOccupants.set(char.mainAreaPointId, occupants);
+    }
+
+    for (const [index, char] of initFrame.characters.entries()) {
+      const charInfo: CharacterInfo = {
+        id: char.id,
+        name: char.name,
+        mbti: "",
+        nickname: "",
+        location: char.location,
+        mainAreaPointId: char.mainAreaPointId,
+        emotion: "neutral",
+        currentAction: null,
+      };
+      const pos = this.getCharacterPlacement(charInfo, mainAreaOccupants);
+      let sprite = this.characterSprites.get(char.id);
+
+      if (sprite) {
+        sprite.setPosition(pos.x, pos.y);
+      } else {
+        const color = getCharacterColor(index);
+        sprite = new CharacterSprite(this, pos.x, pos.y, {
+          characterId: char.id,
+          name: char.name,
+          mbti: "",
+          color,
+          displayMetrics,
+        });
+        sprite.enableClick((id) => this.eventBus.emit("character_clicked", id));
+        this.entityLayer.add(sprite);
+        this.characterSprites.set(char.id, sprite);
+      }
+    }
   }
 
   private async syncCharactersFromServer(): Promise<void> {
@@ -388,7 +453,7 @@ export class WorldScene extends Phaser.Scene {
       if (spriteA && spriteB) {
         if (dialogue.phase === "turn" && dialogue.turnIndexStart === 0) {
           const runtimePatch = await this.characterMovement.approachForDialogue(idA, idB);
-          if (runtimePatch?.mainAreaPointId) {
+          if (runtimePatch?.mainAreaPointId && !this.isReplaying) {
             void apiClient.patchCharacterRuntimeState(idA, runtimePatch).catch((error) => {
               console.warn("[WorldScene] Failed to persist dialogue landing point:", error);
             });
@@ -491,14 +556,7 @@ export class WorldScene extends Phaser.Scene {
 
     const sprite = this.characterSprites.get(nextTurn.speaker);
     if (sprite) {
-      sprite.showBubble(nextTurn.content, bubbleDuration);
-    }
-
-    const innerMonologue = nextTurn.innerMonologue;
-    if (sprite && innerMonologue) {
-      this.time.delayedCall(300, () => {
-        sprite.showMonologue(innerMonologue);
-      });
+      sprite.showBubble(nextTurn.content, bubbleDuration, {}, nextTurn.innerMonologue);
     }
 
     lane.timer = this.time.delayedCall(

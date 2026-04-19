@@ -1,3 +1,4 @@
+import "./i18n";
 import Phaser from "phaser";
 import { createRoot } from "react-dom/client";
 import { BootScene } from "./scenes/BootScene";
@@ -10,10 +11,10 @@ const game = new Phaser.Game({
   width: window.innerWidth,
   height: window.innerHeight,
   parent: "game-root",
+  transparent: true,
   render: { antialias: true, roundPixels: true },
   scale: { mode: Phaser.Scale.RESIZE },
   scene: [BootScene, WorldScene],
-  backgroundColor: "#1a1a2e",
 });
 
 const uiRoot = document.getElementById("ui-root")!;

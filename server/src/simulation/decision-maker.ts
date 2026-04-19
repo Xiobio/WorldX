@@ -8,6 +8,7 @@ import type {
   GameTime,
   Perception,
 } from "../types/index.js";
+import { relativeTimeLabel } from "../utils/time-helpers.js";
 
 export class DecisionMaker {
   constructor(
@@ -43,7 +44,12 @@ export class DecisionMaker {
 
     const relevantMemories =
       memories.length > 0
-        ? memories.map((m) => `- ${m.content}`).join("\n")
+        ? memories
+            .map(
+              (m) =>
+                `- [${relativeTimeLabel(m.gameDay, m.gameTick, gameTime)}] ${m.content}`,
+            )
+            .join("\n")
         : "";
 
     const currentFocus = this.worldManager.getGlobal(`current_focus:${charId}`) ?? undefined;
@@ -56,6 +62,7 @@ export class DecisionMaker {
       relevantMemories,
       actionMenu,
       currentFocus,
+      worldSocialContext: this.worldManager.getWorldSocialContext(),
     });
 
     const result = await this.llmClient.call({

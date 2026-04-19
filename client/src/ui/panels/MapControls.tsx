@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import Phaser from "phaser";
 
 interface CameraState {
@@ -22,6 +23,7 @@ export function MapControls({
   eventBus: Phaser.Events.EventEmitter;
   presentationMode?: boolean;
 }) {
+  const { t } = useTranslation();
   const miniWidth = presentationMode ? MINI_W_COMPACT : MINI_W;
   const [zoom, setZoom] = useState(1);
   const [showHint, setShowHint] = useState(!presentationMode);
@@ -149,17 +151,17 @@ export function MapControls({
       <div style={{ position: "fixed", bottom: 12, left: 12, zIndex: 90, pointerEvents: "auto" }}>
         {/* Zoom bar */}
           <div style={{ ...panelStyle, display: "flex", alignItems: "center", gap: 3, marginBottom: 6, padding: "3px 5px" }}>
-          <ZoomBtn onClick={zoomOut} title="缩小">−</ZoomBtn>
+          <ZoomBtn onClick={zoomOut} title={t("mapControls.zoomOut")}>−</ZoomBtn>
           <div
             onClick={zoomReset}
-            title="重置"
+            title={t("mapControls.zoomReset")}
             style={{ width: 44, textAlign: "center", fontSize: 11, color: "#ccc", cursor: "pointer", userSelect: "none" }}
           >
             {Math.round(zoom * 100)}%
           </div>
-          <ZoomBtn onClick={zoomIn} title="放大">+</ZoomBtn>
+          <ZoomBtn onClick={zoomIn} title={t("mapControls.zoomIn")}>+</ZoomBtn>
           <Divider />
-          <ZoomBtn onClick={zoomFit} title="全览">⊡</ZoomBtn>
+          <ZoomBtn onClick={zoomFit} title={t("mapControls.zoomFit")}>⊡</ZoomBtn>
         </div>
 
         {/* Minimap */}
@@ -201,10 +203,10 @@ export function MapControls({
           }}
         >
           <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4, color: "#ffffff" }}>
-            基础操作
+            {t("mapControls.hintTitle")}
           </div>
-          <div>拖拽地图移动视角，滚轮缩放，左下角缩略图可快速跳转。</div>
-          <div style={{ marginTop: 2 }}>点击角色查看详情，点击上方 `Play` 或 `Instant` 开始推进模拟。</div>
+          <div>{t("mapControls.hintLine1")}</div>
+          <div style={{ marginTop: 2 }}>{t("mapControls.hintLine2")}</div>
           <style>{`
             @keyframes hintFade {
               0%, 78% { opacity: 1; }

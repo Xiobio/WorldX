@@ -1,0 +1,12 @@
+{
+  "id": "tl-20260419-163556",
+  "worldId": "world_2026-04-19T08-31-24",
+  "createdAt": "2026-04-19T08:35:56.941Z",
+  "updatedAt": "2026-04-19T08:50:17.064Z",
+  "lastGameTime": {
+    "day": 1,
+    "tick": 23
+  },
+  "tickCount": 23,
+  "status": "stopped"
+}

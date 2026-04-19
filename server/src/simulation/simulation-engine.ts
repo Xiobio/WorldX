@@ -804,19 +804,27 @@ export class SimulationEngine {
     const events: SimulationEvent[] = [];
     const sessions = this.reconcileDialogueSessions();
 
-    for (const session of sessions) {
-      try {
+    const results = await Promise.allSettled(
+      sessions.map(async (session) => {
         session.endReason = "一天结束，对话终止";
         const finalDialogue = await this.dialogueGenerator.finalizeDialogueSession({
           session,
           gameTime,
         });
+        return { session, finalDialogue };
+      })
+    );
+
+    for (let i = 0; i < sessions.length; i++) {
+      const session = sessions[i];
+      const result = results[i];
+      if (result.status === "fulfilled") {
+        const { finalDialogue } = result.value;
         events.push(this.dialogueCompleteToEvent(session, finalDialogue, gameTime));
-        this.finishDialogueSession(session, absNow);
-      } catch (err) {
-        console.error(`[SimEngine] Error closing dialogue ${session.id} at day end:`, err);
-        this.finishDialogueSession(session, absNow);
+      } else {
+        console.error(`[SimEngine] Error closing dialogue ${session.id} at day end:`, result.reason);
       }
+      this.finishDialogueSession(session, absNow);
     }
 
     return events;
@@ -948,15 +956,15 @@ export class SimulationEngine {
     const events: SimulationEvent[] = [];
     const profiles = this.characterManager.getAllProfiles();
 
-    for (const profile of profiles) {
-      try {
+    const results = await Promise.allSettled(
+      profiles.map(async (profile) => {
         const todayMemories =
           this.characterManager.memoryManager.getMemoriesByDay(
             profile.id,
             gameTime.day,
           );
 
-        if (todayMemories.length < 3) continue;
+        if (todayMemories.length < 3) return null;
 
         const recentMemoriesText = todayMemories
           .map((m) => `- [${m.id}] ${m.content}`)
@@ -1046,11 +1054,11 @@ export class SimulationEngine {
           );
         }
 
-        events.push({
+        return {
           id: generateId(),
           gameDay: gameTime.day,
           gameTick: gameTime.tick,
-          type: "reflection",
+          type: "reflection" as const,
           actorId: profile.id,
           location: state.location,
           data: {
@@ -1059,12 +1067,18 @@ export class SimulationEngine {
             relationshipInsights: result.data.relationshipInsights,
           },
           tags: ["reflection", "end_of_day"],
-        });
-      } catch (err) {
-        console.error(
-          `[SimEngine] Reflection error for ${profile.id}:`,
-          err,
-        );
+        };
+      })
+    );
+
+    for (let i = 0; i < profiles.length; i++) {
+      const result = results[i];
+      if (result.status === "fulfilled") {
+        if (result.value) {
+          events.push(result.value);
+        }
+      } else {
+        console.error(`[SimEngine] Reflection error for ${profiles[i].id}:`, result.reason);
       }
     }
 

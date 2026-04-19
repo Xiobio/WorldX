@@ -5,11 +5,15 @@ import { fileURLToPath } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 export const GENERATED_WORLDS_DIR = path.resolve(__dirname, "../../../output/worlds");
+export const LIBRARY_WORLDS_DIR = path.resolve(__dirname, "../../../library/worlds");
+
+export type WorldSource = "user" | "library";
 
 export interface GeneratedWorldSummary {
   id: string;
   worldName: string;
   dir: string;
+  source: WorldSource;
 }
 
 export function resolveInitialWorldDir(): string | undefined {
@@ -18,22 +22,42 @@ export function resolveInitialWorldDir(): string | undefined {
     return path.resolve(fromEnv);
   }
 
-  return listGeneratedWorlds()[0]?.dir;
+  const allWorlds = listAllWorlds();
+  return allWorlds[0]?.dir;
 }
 
 export function listGeneratedWorlds(): GeneratedWorldSummary[] {
-  if (!isDirectory(GENERATED_WORLDS_DIR)) {
+  return scanWorldsDir(GENERATED_WORLDS_DIR, "user");
+}
+
+export function listLibraryWorlds(): GeneratedWorldSummary[] {
+  return scanWorldsDir(LIBRARY_WORLDS_DIR, "library");
+}
+
+export function listAllWorlds(): GeneratedWorldSummary[] {
+  const userWorlds = listGeneratedWorlds();
+  const libWorlds = listLibraryWorlds();
+  return [...userWorlds, ...libWorlds];
+}
+
+export function findWorldById(worldId: string): GeneratedWorldSummary | undefined {
+  return listAllWorlds().find((w) => w.id === worldId);
+}
+
+function scanWorldsDir(baseDir: string, source: WorldSource): GeneratedWorldSummary[] {
+  if (!isDirectory(baseDir)) {
     return [];
   }
 
-  return fs.readdirSync(GENERATED_WORLDS_DIR, { withFileTypes: true })
+  return fs.readdirSync(baseDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => {
-      const dir = path.join(GENERATED_WORLDS_DIR, entry.name);
+      const dir = path.join(baseDir, entry.name);
       return {
         id: entry.name,
         worldName: readWorldName(dir),
         dir,
+        source,
       };
     })
     .filter((entry): entry is GeneratedWorldSummary & { worldName: string } =>
@@ -57,7 +81,7 @@ function readWorldName(worldDir: string): string | null {
         return parsed.worldName.trim();
       }
     } catch (error) {
-      console.warn(`[WorldSeed] Failed to read world metadata from ${filePath}:`, error);
+      console.warn(`[WorldX] Failed to read world metadata from ${filePath}:`, error);
     }
   }
 

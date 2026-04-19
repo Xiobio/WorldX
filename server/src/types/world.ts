@@ -7,7 +7,8 @@ export interface GameTime {
 /** 场景时间配置 */
 export interface MultiDayConfig {
   enabled: boolean;
-  dayTransitionText: string;
+  endOfDayText: string;
+  newDayText: string;
   nextDayStartTime: string;
 }
 
@@ -102,6 +103,8 @@ export interface WorldGlobalEntry {
 export interface WorldConfig {
   worldName?: string;
   worldDescription?: string;
+  worldSocialContext?: string;
+  contentLanguage?: "zh" | "en";
   scene?: SceneConfig;
   worldActions?: WorldActionConfig[];
   locations: LocationConfig[];

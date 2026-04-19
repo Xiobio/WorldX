@@ -54,6 +54,7 @@ export function buildPerception(
         id: c.profile.id,
         name: c.profile.name,
         currentAction: c.state.currentAction,
+        appearanceHint: c.profile.appearanceHint,
         locationId: c.state.location,
         locationName: targetLocation,
         emotionLabel: visiblyEmotional

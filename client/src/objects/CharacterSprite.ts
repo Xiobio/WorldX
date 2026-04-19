@@ -43,6 +43,12 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
   private idleTween: Phaser.Tweens.Tween | null = null;
   private walkTween: Phaser.Tweens.Tween | null = null;
   private labelRoot: HTMLDivElement | null = null;
+  private dialogueBubbleRoot: HTMLDivElement | null = null;
+  private dialogueBubbleCard: HTMLDivElement | null = null;
+  private dialogueBubbleTail: HTMLDivElement | null = null;
+  private dialogueBubbleMainEl: HTMLDivElement | null = null;
+  private dialogueBubbleInnerWrapEl: HTMLDivElement | null = null;
+  private dialogueBubbleInnerEl: HTMLDivElement | null = null;
   private mbtiEl: HTMLDivElement | null = null;
   private nameRowEl: HTMLDivElement | null = null;
   private nameEl: HTMLDivElement | null = null;
@@ -51,6 +57,7 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
   private facing: FacingDirection = "down";
   private overlayZoom = 1;
   private displayMetrics: CharacterDisplayMetrics;
+  private dialogueBubbleVisible = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -161,6 +168,7 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     nameRow.append(name, icon);
     root.append(nameRow);
     overlayRoot.appendChild(root);
+    this.createDomDialogueBubble(overlayRoot);
 
     this.labelRoot = root;
     this.mbtiEl = null;
@@ -170,6 +178,39 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     this.updateDomLabelStyle();
     this.updateDomLabelVisibility();
     this.updateDomLabelPosition();
+  }
+
+  private createDomDialogueBubble(overlayRoot: HTMLElement): void {
+    const root = document.createElement("div");
+    root.className = "character-dialogue-bubble";
+    root.style.position = "absolute";
+    root.style.display = "none";
+    root.style.flexDirection = "column";
+    root.style.alignItems = "center";
+    root.style.transform = "translate(-50%, -100%)";
+    root.style.pointerEvents = "none";
+    root.style.userSelect = "none";
+    root.style.zIndex = "40";
+
+    const card = document.createElement("div");
+    const main = document.createElement("div");
+    const innerWrap = document.createElement("div");
+    const inner = document.createElement("div");
+    const tail = document.createElement("div");
+
+    innerWrap.style.display = "none";
+    innerWrap.append(inner);
+    card.append(main, innerWrap);
+    root.append(card, tail);
+    overlayRoot.appendChild(root);
+
+    this.dialogueBubbleRoot = root;
+    this.dialogueBubbleCard = card;
+    this.dialogueBubbleTail = tail;
+    this.dialogueBubbleMainEl = main;
+    this.dialogueBubbleInnerWrapEl = innerWrap;
+    this.dialogueBubbleInnerEl = inner;
+    this.updateDialogueBubbleStyle();
   }
 
   private createCircleBody(color: number): void {
@@ -381,17 +422,56 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     text: string,
     duration = 3000,
     textStyleOverrides: Partial<Phaser.Types.GameObjects.Text.TextStyle> = {},
+    innerMonologue?: string,
   ): void {
     if (this.bubbleHideTimer) {
       this.bubbleHideTimer.remove(false);
       this.bubbleHideTimer = null;
     }
+    if (this.osBubbleHideTimer) {
+      this.osBubbleHideTimer.remove(false);
+      this.osBubbleHideTimer = null;
+    }
+    if (this.osBubbleContainer.visible) {
+      this.osBubbleContainer.setVisible(false);
+    }
+
+    const hasMainText = !!text.trim();
+    const hasInnerMonologue = !!innerMonologue?.trim();
+
+    if (
+      this.dialogueBubbleRoot &&
+      this.dialogueBubbleMainEl &&
+      this.dialogueBubbleInnerWrapEl &&
+      this.dialogueBubbleInnerEl
+    ) {
+      this.dialogueBubbleMainEl.textContent = text;
+      this.dialogueBubbleMainEl.style.display = hasMainText ? "block" : "none";
+
+      this.dialogueBubbleInnerEl.textContent = innerMonologue ?? "";
+      this.dialogueBubbleInnerWrapEl.style.display = hasInnerMonologue ? "flex" : "none";
+
+      this.updateDialogueBubbleStyle();
+      this.dialogueBubbleVisible = true;
+      this.bubbleContainer.setVisible(false);
+      this.currentBubbleVerticalSpan = 0;
+      this.updateDomLabelVisibility();
+      this.updateDomLabelPosition();
+      this.bubbleHideTimer = this.scene.time.delayedCall(duration, () => {
+        this.dialogueBubbleVisible = false;
+        this.updateDomLabelVisibility();
+        this.updateDomLabelPosition();
+        this.bubbleHideTimer = null;
+      });
+      return;
+    }
+
     this.applyBubbleTextStyle({
       fontStyle: "bold",
       color: "#222222",
       ...textStyleOverrides,
     });
-    this.bubbleText.setText(text);
+    this.bubbleText.setText(text || (innerMonologue ?? ""));
     this.bubbleText.updateText();
     const textW = this.bubbleText.width;
     const textH = this.bubbleText.height;
@@ -436,44 +516,7 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
   }
 
   showMonologue(text: string): void {
-    if (this.osBubbleHideTimer) {
-      this.osBubbleHideTimer.remove(false);
-      this.osBubbleHideTimer = null;
-    }
-    const duration = 7000;
-    this.osBubbleText.setText(text);
-    this.osBubbleText.updateText();
-    const textW = this.osBubbleText.width;
-    const textH = this.osBubbleText.height;
-    const pad = this.displayMetrics.bubblePadding;
-    const tailH = this.displayMetrics.bubbleTailHeight + 4;
-    const w = textW + pad * 2;
-    const h = textH + pad * 2;
-    const shadowOffset = Math.max(1, pad * 0.22);
-
-    this.osBubbleBg.clear();
-    
-    const cr = this.displayMetrics.bubbleCornerRadius * 1.8;
-    
-    this.osBubbleBg.fillStyle(0x000000, 0.12);
-    this.osBubbleBg.fillRoundedRect(-w / 2 + shadowOffset, -h - tailH + shadowOffset, w, h, cr);
-    this.osBubbleBg.fillStyle(0xffffff, 0.95);
-    this.osBubbleBg.fillRoundedRect(-w / 2, -h - tailH, w, h, cr);
-    
-    this.osBubbleBg.fillCircle(4, -tailH + 2, 4.5);
-    this.osBubbleBg.fillCircle(-2, -tailH + 11, 3);
-    this.osBubbleBg.fillCircle(2, -tailH + 18, 2);
-
-    this.osBubbleText.setY(-tailH - pad);
-
-    this.updateOsBubblePosition();
-    this.osBubbleContainer.setVisible(true);
-    this.updateDomLabelVisibility();
-    this.osBubbleHideTimer = this.scene.time.delayedCall(duration, () => {
-      this.osBubbleContainer.setVisible(false);
-      this.updateDomLabelVisibility();
-      this.osBubbleHideTimer = null;
-    });
+    this.showBubble("", 7000, {}, text);
   }
 
   setActionIcon(emoji: string): void {
@@ -493,9 +536,11 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     }
     this.bubbleContainer.setVisible(false);
     this.osBubbleContainer.setVisible(false);
+    this.dialogueBubbleVisible = false;
     this.currentBubbleVerticalSpan = 0;
     this.updateDomLabelVisibility();
     this.updateOsBubblePosition();
+    this.updateDomLabelPosition();
   }
 
   syncOverlayZoom(cameraZoom: number): void {
@@ -517,15 +562,86 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     const gap = Phaser.Math.Clamp(this.displayMetrics.labelGapWorld * zoom, 1, 6);
 
     this.labelRoot.style.gap = `${gap}px`;
+    this.labelRoot.style.zIndex = "10";
     this.nameRowEl.style.gap = `${Math.max(2, gap)}px`;
     this.nameEl.style.fontSize = `${nameSize}px`;
     this.actionIconEl.style.fontSize = `${iconSize}px`;
+    this.updateDialogueBubbleStyle();
   }
 
   private updateDomLabelVisibility(): void {
     if (!this.labelRoot) return;
-    const yieldToBubble = this.bubbleContainer?.visible || this.osBubbleContainer?.visible;
-    this.labelRoot.style.visibility = yieldToBubble ? "hidden" : "visible";
+    const hideName = this.dialogueBubbleVisible || this.osBubbleContainer?.visible;
+    this.labelRoot.style.visibility = hideName ? "hidden" : "visible";
+  }
+
+  private updateDialogueBubbleStyle(): void {
+    if (
+      !this.dialogueBubbleCard ||
+      !this.dialogueBubbleTail ||
+      !this.dialogueBubbleMainEl ||
+      !this.dialogueBubbleInnerWrapEl ||
+      !this.dialogueBubbleInnerEl
+    ) {
+      return;
+    }
+
+    const zoom = Math.max(this.overlayZoom, 0.01);
+    const fontSize = Phaser.Math.Clamp(this.displayMetrics.bubbleFontSize * zoom * 0.93, 11, 26);
+    const innerFontSize = Phaser.Math.Clamp(fontSize * 0.75, 9, 20);
+    const wrapWidth = Math.max(
+      210,
+      this.displayMetrics.bubbleWrapWidth * zoom * 1.28
+    );
+    const padX = Phaser.Math.Clamp(this.displayMetrics.bubblePadding * zoom * 1.1, 10, 24);
+    const padY = Phaser.Math.Clamp(this.displayMetrics.bubblePadding * zoom * 0.95, 8, 18);
+    const radius = Phaser.Math.Clamp(this.displayMetrics.bubbleCornerRadius * zoom, 8, 20);
+    const tail = Phaser.Math.Clamp(this.displayMetrics.bubbleTailHeight * zoom * 1.4, 6, 16);
+
+    this.dialogueBubbleCard.style.display = "flex";
+    this.dialogueBubbleCard.style.flexDirection = "column";
+    this.dialogueBubbleCard.style.alignItems = "stretch";
+    this.dialogueBubbleCard.style.maxWidth = `${wrapWidth}px`;
+    this.dialogueBubbleCard.style.padding = `${padY}px ${padX}px`;
+    this.dialogueBubbleCard.style.borderRadius = `${radius}px`;
+    this.dialogueBubbleCard.style.background = "rgba(255,255,255,0.98)";
+    this.dialogueBubbleCard.style.border = "1px solid rgba(33,40,62,0.08)";
+    this.dialogueBubbleCard.style.boxShadow = "0 10px 28px rgba(8,14,32,0.18), 0 2px 8px rgba(8,14,32,0.08)";
+
+    this.dialogueBubbleMainEl.style.color = "#1e2433";
+    this.dialogueBubbleMainEl.style.fontFamily = "'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
+    this.dialogueBubbleMainEl.style.fontWeight = "700";
+    this.dialogueBubbleMainEl.style.fontSize = `${fontSize}px`;
+    this.dialogueBubbleMainEl.style.lineHeight = "1.33";
+    this.dialogueBubbleMainEl.style.whiteSpace = "pre-wrap";
+    this.dialogueBubbleMainEl.style.wordBreak = "break-word";
+    this.dialogueBubbleMainEl.style.overflowWrap = "anywhere";
+
+    const isMonologueOnly = this.dialogueBubbleMainEl.style.display === "none";
+    this.dialogueBubbleInnerWrapEl.style.flexDirection = "column";
+    this.dialogueBubbleInnerWrapEl.style.gap = `${Math.max(4, padY * 0.35)}px`;
+    this.dialogueBubbleInnerWrapEl.style.marginTop = isMonologueOnly ? "0" : `${Math.max(8, padY * 0.8)}px`;
+    this.dialogueBubbleInnerWrapEl.style.padding = `${Math.max(7, padY * 0.6)}px ${Math.max(9, padX * 0.7)}px`;
+    this.dialogueBubbleInnerWrapEl.style.borderRadius = `${Math.max(8, radius * 0.75)}px`;
+    this.dialogueBubbleInnerWrapEl.style.background = "linear-gradient(180deg, rgba(110,123,255,0.08), rgba(110,123,255,0.03))";
+    this.dialogueBubbleInnerWrapEl.style.borderTop = isMonologueOnly ? "none" : "1px solid rgba(110,123,255,0.14)";
+
+    this.dialogueBubbleInnerEl.style.color = "#586079";
+    this.dialogueBubbleInnerEl.style.fontFamily = "'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif";
+    this.dialogueBubbleInnerEl.style.fontSize = `${innerFontSize}px`;
+    this.dialogueBubbleInnerEl.style.fontStyle = "italic";
+    this.dialogueBubbleInnerEl.style.lineHeight = "1.42";
+    this.dialogueBubbleInnerEl.style.whiteSpace = "pre-wrap";
+    this.dialogueBubbleInnerEl.style.wordBreak = "break-word";
+    this.dialogueBubbleInnerEl.style.overflowWrap = "anywhere";
+
+    this.dialogueBubbleTail.style.width = "0";
+    this.dialogueBubbleTail.style.height = "0";
+    this.dialogueBubbleTail.style.marginTop = "-1px";
+    this.dialogueBubbleTail.style.borderLeft = `${tail}px solid transparent`;
+    this.dialogueBubbleTail.style.borderRight = `${tail}px solid transparent`;
+    this.dialogueBubbleTail.style.borderTop = `${tail + 2}px solid rgba(255,255,255,0.98)`;
+    this.dialogueBubbleTail.style.filter = "drop-shadow(0 3px 4px rgba(8,14,32,0.08))";
   }
 
   private applyBubbleTextStyle(overrides: Phaser.Types.GameObjects.Text.TextStyle): void {
@@ -569,6 +685,10 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
       screenY <= camera.height + 120;
 
     this.labelRoot.style.display = visible ? "flex" : "none";
+    if (this.dialogueBubbleRoot) {
+      this.dialogueBubbleRoot.style.display =
+        visible && this.dialogueBubbleVisible ? "flex" : "none";
+    }
     this.updateDomLabelVisibility();
     if (!visible) return;
 
@@ -578,6 +698,13 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     const headScreenY = screenY - this.getHeadWorldOffset() * camera.zoom;
     this.labelRoot.style.left = `${Math.round(screenX)}px`;
     this.labelRoot.style.top = `${Math.round(headScreenY)}px`;
+
+    if (this.dialogueBubbleRoot && this.dialogueBubbleVisible) {
+      const bubbleScreenY =
+        (this.y + this.getBubbleAnchorOffsetY() - worldView.y) * camera.zoom + camera.y;
+      this.dialogueBubbleRoot.style.left = `${Math.round(screenX)}px`;
+      this.dialogueBubbleRoot.style.top = `${Math.round(bubbleScreenY)}px`;
+    }
   }
 
   /** World-unit distance from the container origin (feet) up to the head top. */
@@ -651,7 +778,14 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     this.osBubbleHideTimer?.remove(false);
     this.osBubbleHideTimer = null;
     this.labelRoot?.remove();
+    this.dialogueBubbleRoot?.remove();
     this.labelRoot = null;
+    this.dialogueBubbleRoot = null;
+    this.dialogueBubbleCard = null;
+    this.dialogueBubbleTail = null;
+    this.dialogueBubbleMainEl = null;
+    this.dialogueBubbleInnerWrapEl = null;
+    this.dialogueBubbleInnerEl = null;
     this.mbtiEl = null;
     this.nameRowEl = null;
     this.nameEl = null;
