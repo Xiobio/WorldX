@@ -60,35 +60,6 @@ router.get("/:id", (req, res) => {
   }
 });
 
-// GET /characters/:id/relationships
-router.get("/:id/relationships", (req, res) => {
-  const rels = appContext.characterManager.relationshipManager.getAllRelationshipsOf(
-    req.params.id,
-  );
-
-  const result = rels.map((r) => {
-    let targetName = r.targetId;
-    try {
-      targetName = appContext.characterManager.getProfile(r.targetId).name;
-    } catch { /* profile might not exist */ }
-
-    return {
-      targetId: r.targetId,
-      targetName,
-      label: appContext.characterManager.relationshipManager.deriveLabel(r),
-      dimensions: {
-        familiarity: r.familiarity,
-        trust: r.trust,
-        affection: r.affection,
-        respect: r.respect,
-        tension: r.tension,
-        romanticFlag: r.romanticFlag,
-      },
-    };
-  });
-  res.json(result);
-});
-
 // GET /characters/:id/diary
 router.get("/:id/diary", (req, res) => {
   const gameDay = req.query.day ? Number(req.query.day) : undefined;

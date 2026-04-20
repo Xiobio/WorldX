@@ -30,16 +30,6 @@ export const DialogueResultSchema = z.object({
     .min(2)
     .max(10),
   memoriesGenerated: z.record(z.string(), z.string()),
-  relationshipDeltas: z.record(
-    z.string(),
-    z.object({
-      familiarity: z.number().optional(),
-      trust: z.number().optional(),
-      affection: z.number().optional(),
-      respect: z.number().optional(),
-      tension: z.number().optional(),
-    }),
-  ),
   tags: z.array(z.string()),
 });
 
@@ -61,16 +51,6 @@ export type DialogueTurnOutput = z.infer<typeof DialogueTurnSchema>;
 /** 4.2b 对话收尾输出 */
 export const DialogueFinalizeSchema = z.object({
   memoriesGenerated: z.record(z.string(), z.string()),
-  relationshipDeltas: z.record(
-    z.string(),
-    z.object({
-      familiarity: z.number().optional(),
-      trust: z.number().optional(),
-      affection: z.number().optional(),
-      respect: z.number().optional(),
-      tension: z.number().optional(),
-    }),
-  ),
   tags: z.array(z.string()),
   endReason: z.string().optional(),
   hearsayGenerated: z.record(z.string(), z.string()).optional(),
@@ -132,19 +112,6 @@ export const ReflectionSchema = z.object({
     valence: z.number().min(-3).max(3),
     arousal: z.number().min(-3).max(3),
   }),
-  relationshipInsights: z
-    .array(
-      z.object({
-        targetId: z.string(),
-        deltas: z.object({
-          trust: z.number().optional(),
-          affection: z.number().optional(),
-          respect: z.number().optional(),
-        }),
-        reason: z.string(),
-      }),
-    )
-    .optional(),
   currentFocus: z.string().min(5).max(100).optional(),
 });
 

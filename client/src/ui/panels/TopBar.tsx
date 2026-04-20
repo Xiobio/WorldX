@@ -448,7 +448,6 @@ export function TopBar({
 
         {/* Right: feature entries + tools */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-          <button onClick={() => navigate("/graph")} style={chipBtnStyle(false)}>{t("topbar.relations")}</button>
           <button onClick={() => navigate("/timeline")} style={chipBtnStyle(false)}>{t("topbar.eventLog")}</button>
           <button
             onClick={() => setGodPanelOpen(true)}

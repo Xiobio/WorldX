@@ -33,7 +33,6 @@ export interface DialogueResult {
   location: string;
   turns: DialogueTurn[];
   memoriesGenerated: Record<string, string>;
-  relationshipDeltas: Record<string, Record<string, number>>;
   tags: string[];
   endReason?: string;
 }
@@ -82,7 +81,6 @@ export interface DialogueEventData {
   isFinal: boolean;
   participants: string[];
   memoriesGenerated?: Record<string, string>;
-  relationshipDeltas?: Record<string, Record<string, number>>;
   endReason?: string;
 }
 

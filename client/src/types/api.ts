@@ -71,22 +71,6 @@ export interface CharacterDetail {
   emotionLabel: string;
 }
 
-export interface RelationshipDimensions {
-  familiarity: number;
-  trust: number;
-  affection: number;
-  respect: number;
-  tension: number;
-  romanticFlag: boolean;
-}
-
-export interface RelationshipEdge {
-  targetId: string;
-  targetName: string;
-  label: string;
-  dimensions: RelationshipDimensions;
-}
-
 export interface DiaryEntry {
   day: number;
   content: string;
@@ -114,7 +98,6 @@ export interface DialogueEventData {
   isFinal: boolean;
   participants: string[];
   memoriesGenerated?: Record<string, string>;
-  relationshipDeltas?: Record<string, Record<string, number>>;
   endReason?: string;
 }
 
@@ -151,12 +134,6 @@ export interface MainAreaPointInfo {
   x: number;
   y: number;
   adjacentPointIds: string[];
-}
-
-export interface GraphData {
-  nodes: { id: string; name: string; role: string }[];
-  edges: { source: string; target: string; label: string; strength: number }[];
-  generatedAt?: GameTime | string;
 }
 
 export interface TimelineMeta {

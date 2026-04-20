@@ -34,7 +34,6 @@ import * as eventStore from "../store/event-store.js";
 import { calculateDramScore, flagHighDramaEvents } from "../content/drama-scorer.js";
 import { extractQuotes } from "../content/quote-extractor.js";
 import { generateDailySummary } from "../content/summary-generator.js";
-import { generateGraphSnapshot } from "../content/relationship-graph.js";
 
 function shuffle<T>(arr: T[]): T[] {
   const a = [...arr];
@@ -235,21 +234,6 @@ export class SimulationEngine {
     events.push(...reflectionEvents);
 
     this.runEndOfDayDecay(cycleEndTime);
-    try {
-      const graphData = generateGraphSnapshot(this.characterManager);
-      graphData.generatedAt = cycleEndTime;
-      events.push({
-        id: generateId(),
-        gameDay: cycleEndTime.day,
-        gameTick: cycleEndTime.tick,
-        type: "world_state_change",
-        location: "global",
-        data: { subtype: "relationship_graph", graph: graphData },
-        tags: ["relationship_graph", "daily"],
-      });
-    } catch (err) {
-      console.error("[SimEngine] Relationship graph error:", err);
-    }
 
     this.worldManager.createSnapshot(`Day ${cycleEndTime.day} ended`);
     this.worldManager.resetTransientStateForNewScene();
@@ -900,7 +884,6 @@ export class SimulationEngine {
       isFinal: true,
       participants: dialogue.participants,
       memoriesGenerated: dialogue.memoriesGenerated,
-      relationshipDeltas: dialogue.relationshipDeltas,
       endReason: dialogue.endReason,
     };
 
@@ -997,23 +980,10 @@ export class SimulationEngine {
           .map((m) => `- [${m.id}] ${m.content}`)
           .join("\n");
 
-        const relationships =
-          this.characterManager.relationshipManager.getAllRelationshipsOf(
-            profile.id,
-          );
-        const relationshipSummary = relationships
-          .filter((r) => r.familiarity > 5)
-          .map((r) => {
-            const target = this.characterManager.getProfile(r.targetId);
-            return `${target.name}: 信任${Math.round(r.trust)} 好感${Math.round(r.affection)} 尊重${Math.round(r.respect)}`;
-          })
-          .join("\n");
-
         const messages = this.promptBuilder.buildReflectionMessages({
           profile,
           gameDay: gameTime.day,
           recentMemories: recentMemoriesText,
-          relationshipSummary,
         });
 
         const result = await this.llmClient.call({
@@ -1059,21 +1029,6 @@ export class SimulationEngine {
           ),
         });
 
-        if (result.data.relationshipInsights) {
-          for (const ri of result.data.relationshipInsights) {
-            const resolvedTargetId = this.resolveId(ri.targetId);
-            try {
-              this.characterManager.relationshipManager.updateRelationship(
-                profile.id,
-                resolvedTargetId,
-                ri.deltas,
-              );
-            } catch {
-              // relationship pair may not exist
-            }
-          }
-        }
-
         if (result.data.currentFocus) {
           this.worldManager.setGlobal(
             `current_focus:${profile.id}`,
@@ -1091,7 +1046,6 @@ export class SimulationEngine {
           data: {
             insights: result.data.insights.map((i) => i.content),
             emotionShift: result.data.emotionShift,
-            relationshipInsights: result.data.relationshipInsights,
           },
           tags: ["reflection", "end_of_day"],
         };

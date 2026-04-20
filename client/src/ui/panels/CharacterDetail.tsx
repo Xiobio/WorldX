@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { apiClient } from "../services/api-client";
 import type {
   CharacterDetail as CharDetailType,
-  RelationshipEdge,
   MemoryEntry,
   SimulationEvent,
   CharacterInfo,
@@ -17,7 +16,7 @@ import {
   formatEventType,
 } from "../utils/event-format";
 
-type Tab = "history" | "relations" | "memory";
+type Tab = "history" | "memory";
 type DialogueTurnRecord = {
   kind: "dialogue_turn";
   key: string;
@@ -63,7 +62,6 @@ export function CharacterDetail({
 }) {
   const [detail, setDetail] = useState<CharDetailType | null>(null);
   const [tab, setTab] = useState<Tab>("history");
-  const [relations, setRelations] = useState<RelationshipEdge[]>([]);
   const [memories, setMemories] = useState<MemoryEntry[]>([]);
   const [locations, setLocations] = useState<LocationInfo[]>([]);
   const [storedEvents, setStoredEvents] = useState<SimulationEvent[]>([]);
@@ -78,7 +76,6 @@ export function CharacterDetail({
 
   useEffect(() => {
     if (tab === "history") apiClient.getEvents({}).then(setStoredEvents).catch(console.warn);
-    if (tab === "relations") apiClient.getRelationships(charId).then(setRelations).catch(console.warn);
     if (tab === "memory") apiClient.getMemories(charId).then(setMemories).catch(console.warn);
   }, [charId, tab]);
   const characterNames = useMemo(() => buildCharacterNameMap(characters), [characters]);
@@ -102,10 +99,6 @@ export function CharacterDetail({
 
   const { profile, state, emotionLabel } = detail;
   const isFollowing = followedCharId === charId;
-  const relationStrength = (relation: RelationshipEdge) => {
-    const { familiarity, trust, affection } = relation.dimensions;
-    return Math.round((familiarity + trust + affection) / 3);
-  };
 
   const openEditor = () => {
     setEditDraft({
@@ -191,7 +184,7 @@ export function CharacterDetail({
       )}
 
       <div style={{ display: "flex", gap: 4, marginBottom: 8, flexShrink: 0 }}>
-        {(["history", "relations", "memory"] as Tab[]).map((tabT) => (
+        {(["history", "memory"] as Tab[]).map((tabT) => (
           <button
             key={tabT}
             onClick={() => setTab(tabT)}
@@ -206,7 +199,7 @@ export function CharacterDetail({
               fontSize: 11,
             }}
           >
-            {{ history: t("charDetail.tabHistory"), relations: t("charDetail.tabRelations"), memory: t("charDetail.tabMemory") }[tabT]}
+            {{ history: t("charDetail.tabHistory"), memory: t("charDetail.tabMemory") }[tabT]}
           </button>
         ))}
       </div>
@@ -284,12 +277,6 @@ export function CharacterDetail({
               )}
             </div>
           ))}
-        {tab === "relations" &&
-          relations.map((r, i) => (
-            <div key={i} style={{ padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
-              {r.targetName || r.targetId}: {t(`relationLabel.${r.label}`, { defaultValue: r.label })} ({relationStrength(r)}%)
-            </div>
-          ))}
         {tab === "memory" &&
           memories.map((m, i) => (
             <div key={i} style={{ padding: "3px 0", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
@@ -297,7 +284,6 @@ export function CharacterDetail({
             </div>
           ))}
         {((tab === "history" && mergedHistory.length === 0) ||
-          (tab === "relations" && relations.length === 0) ||
           (tab === "memory" && memories.length === 0)) && (
           <div style={{ color: "#666", padding: 8, textAlign: "center" }}>{t("charDetail.noData")}</div>
         )}

@@ -81,7 +81,6 @@
     "pauseReplay": "暂停播放",
     "playRun": "开始运行",
     "playReplay": "开始播放",
-    "relations": "关系图谱",
     "eventLog": "事件日志",
     "godMode": "👁️ 上帝视角",
     "godModeTitle": "向世界广播事件或给某个角色植入记忆",
@@ -126,7 +125,6 @@
     "emotion": "情绪",
     "action": "行动",
     "tabHistory": "历史",
-    "tabRelations": "关系",
     "tabMemory": "记忆",
     "noData": "暂无数据",
     "saved": "已保存",
@@ -266,12 +264,6 @@
     "backToWorld": "← 返回小镇",
     "noEvents": "暂无事件数据"
   },
-  "graph": {
-    "title": "关系图谱",
-    "backToWorld": "← 返回小镇",
-    "loadError": "加载关系图失败，请先运行至少一天的模拟。",
-    "renderError": "关系图渲染失败"
-  },
   "eventFormat": {
     "typeDialogue": "对话",
     "typeMovement": "移动",
@@ -333,16 +325,6 @@
     "defaultSummary": "发生了一件事",
     "needCuriosity": "好奇心",
     "needDefault": "某项状态"
-  },
-  "relationLabel": {
-    "stranger": "陌生人",
-    "acquaintance": "点头之交",
-    "friend": "朋友",
-    "close_friend": "挚友",
-    "crush": "暗恋",
-    "lover": "恋人",
-    "rival": "对手",
-    "frenemy": "亦敌亦友"
   },
   "memoryType": {
     "observation": "见闻",

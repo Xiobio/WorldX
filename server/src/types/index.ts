@@ -20,8 +20,6 @@ export type {
   CharacterAnchor,
   CharacterState,
   MemoryEntry,
-  Relationship,
-  RelationshipLabel,
   DailyPlan,
   PlanItem,
   DiaryEntry,

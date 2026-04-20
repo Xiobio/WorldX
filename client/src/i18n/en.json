@@ -81,7 +81,6 @@
     "pauseReplay": "Pause",
     "playRun": "Run",
     "playReplay": "Play",
-    "relations": "Relations",
     "eventLog": "Event Log",
     "godMode": "👁️ God Mode",
     "godModeTitle": "Broadcast events or implant memories into characters",
@@ -126,7 +125,6 @@
     "emotion": "Mood",
     "action": "Action",
     "tabHistory": "History",
-    "tabRelations": "Relations",
     "tabMemory": "Memory",
     "noData": "No data yet",
     "saved": "Saved",
@@ -266,12 +264,6 @@
     "backToWorld": "← Back to world",
     "noEvents": "No event data yet"
   },
-  "graph": {
-    "title": "Relationship Graph",
-    "backToWorld": "← Back to world",
-    "loadError": "Failed to load relationship graph. Run at least one day of simulation first.",
-    "renderError": "Failed to render relationship graph"
-  },
   "eventFormat": {
     "typeDialogue": "Dialogue",
     "typeMovement": "Movement",
@@ -333,16 +325,6 @@
     "defaultSummary": "Something happened",
     "needCuriosity": "curiosity",
     "needDefault": "a need"
-  },
-  "relationLabel": {
-    "stranger": "stranger",
-    "acquaintance": "acquaintance",
-    "friend": "friend",
-    "close_friend": "close friend",
-    "crush": "crush",
-    "lover": "lover",
-    "rival": "rival",
-    "frenemy": "frenemy"
   },
   "memoryType": {
     "observation": "observation",

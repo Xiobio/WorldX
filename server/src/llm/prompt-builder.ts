@@ -8,7 +8,6 @@ import type {
   CharacterState,
   GameTime,
   Perception,
-  Relationship,
 } from "../types/index.js";
 
 export interface Message {
@@ -106,7 +105,6 @@ export class PromptBuilder {
       profile: CharacterProfile;
       state: CharacterState;
       memoriesAboutOther: string;
-      relationship: Relationship;
     }[];
     location: string;
     initiatorId: string;
@@ -130,10 +128,6 @@ export class PromptBuilder {
         a.state.emotionValence,
         a.state.emotionArousal,
       ),
-      familiarityAB: String(Math.round(a.relationship.familiarity)),
-      affectionAB: String(Math.round(a.relationship.affection)),
-      trustAB: String(Math.round(a.relationship.trust)),
-      tensionAB: String(Math.round(a.relationship.tension)),
       memoriesAaboutB: a.memoriesAboutOther || "（无）",
       motivation: params.initiatorMotivation,
 
@@ -145,10 +139,6 @@ export class PromptBuilder {
         b.state.emotionValence,
         b.state.emotionArousal,
       ),
-      familiarityBA: String(Math.round(b.relationship.familiarity)),
-      affectionBA: String(Math.round(b.relationship.affection)),
-      trustBA: String(Math.round(b.relationship.trust)),
-      tensionBA: String(Math.round(b.relationship.tension)),
       memoriesBaboutA: b.memoriesAboutOther || "（无）",
 
       worldSocialContext: formatWorldSocialContext(params.worldSocialContext),
@@ -165,7 +155,6 @@ export class PromptBuilder {
       profile: CharacterProfile;
       state: CharacterState;
       memoriesAboutOther: string;
-      relationship: Relationship;
     }[];
     location: string;
     initiatorId: string;
@@ -198,10 +187,6 @@ export class PromptBuilder {
         a.state.emotionValence,
         a.state.emotionArousal,
       ),
-      familiarityAB: String(Math.round(a.relationship.familiarity)),
-      affectionAB: String(Math.round(a.relationship.affection)),
-      trustAB: String(Math.round(a.relationship.trust)),
-      tensionAB: String(Math.round(a.relationship.tension)),
       memoriesAaboutB: a.memoriesAboutOther || "（无）",
       hearsayA: params.hearsayA || "（无）",
       motivation: params.initiatorMotivation,
@@ -215,10 +200,6 @@ export class PromptBuilder {
         b.state.emotionValence,
         b.state.emotionArousal,
       ),
-      familiarityBA: String(Math.round(b.relationship.familiarity)),
-      affectionBA: String(Math.round(b.relationship.affection)),
-      trustBA: String(Math.round(b.relationship.trust)),
-      tensionBA: String(Math.round(b.relationship.tension)),
       memoriesBaboutA: b.memoriesAboutOther || "（无）",
       hearsayB: params.hearsayB || "（无）",
 
@@ -242,7 +223,6 @@ export class PromptBuilder {
       profile: CharacterProfile;
       state: CharacterState;
       memoriesAboutOther: string;
-      relationship: Relationship;
     }[];
     location: string;
     initiatorId: string;
@@ -261,16 +241,8 @@ export class PromptBuilder {
     const content = this.build("dialogue-finalize", {
       nameA: a.profile.name,
       idA: a.profile.id,
-      familiarityAB: String(Math.round(a.relationship.familiarity)),
-      affectionAB: String(Math.round(a.relationship.affection)),
-      trustAB: String(Math.round(a.relationship.trust)),
-      tensionAB: String(Math.round(a.relationship.tension)),
       nameB: b.profile.name,
       idB: b.profile.id,
-      familiarityBA: String(Math.round(b.relationship.familiarity)),
-      affectionBA: String(Math.round(b.relationship.affection)),
-      trustBA: String(Math.round(b.relationship.trust)),
-      tensionBA: String(Math.round(b.relationship.tension)),
       worldSocialContext: formatWorldSocialContext(params.worldSocialContext),
       location,
       day: String(gameTime.day),
@@ -389,7 +361,6 @@ export class PromptBuilder {
     profile: CharacterProfile;
     gameDay: number;
     recentMemories: string;
-    relationshipSummary: string;
   }): Message[] {
     const { profile, gameDay } = params;
 
@@ -399,7 +370,6 @@ export class PromptBuilder {
       coreTraits: profile.coreTraits.join("、"),
       day: String(gameDay),
       recentMemories: params.recentMemories || "（今天没什么特别的事）",
-      relationshipSummary: params.relationshipSummary || "（还没认识其他人）",
     });
 
     return [{ role: "user", content }];

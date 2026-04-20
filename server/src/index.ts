@@ -13,7 +13,6 @@ import worldRoutes from "./api/routes/world.js";
 import worldsCreateRoutes from "./api/routes/worlds-create.js";
 import characterRoutes from "./api/routes/characters.js";
 import eventsRoutes from "./api/routes/events.js";
-import graphRoutes from "./api/routes/graph.js";
 import { createPublicContentRouter } from "./api/routes/content.js";
 import simulationRoutes from "./api/routes/simulation.js";
 import godRoutes from "./api/routes/god.js";
@@ -102,7 +101,6 @@ async function main() {
   app.use("/api/world", worldRoutes);
   app.use("/api/characters", requireWorld, characterRoutes);
   app.use("/api/events", requireWorld, eventsRoutes);
-  app.use("/api/graph", requireWorld, graphRoutes);
   app.use("/api/content", requireWorld, createPublicContentRouter());
   app.use("/api/simulation", requireWorld, simulationRoutes);
   app.use("/api/god", requireWorld, godRoutes);

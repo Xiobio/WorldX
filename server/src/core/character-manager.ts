@@ -10,7 +10,6 @@ import { loadCharacterProfiles } from "../utils/config-loader.js";
 import { generateId } from "../utils/id-generator.js";
 import * as charStateStore from "../store/character-state-store.js";
 import { MemoryManager } from "./memory-manager.js";
-import { RelationshipManager } from "./relationship-manager.js";
 import { decayNeeds } from "./needs-manager.js";
 import { decayEmotion } from "./emotion-manager.js";
 import { getDb } from "../store/db.js";
@@ -18,13 +17,11 @@ import * as memoryStore from "../store/memory-store.js";
 
 export class CharacterManager {
   memoryManager: MemoryManager;
-  relationshipManager: RelationshipManager;
 
   private profiles: Map<string, CharacterProfile> = new Map();
 
   constructor(private worldManager: WorldManager) {
     this.memoryManager = new MemoryManager();
-    this.relationshipManager = new RelationshipManager(this.profiles);
   }
 
   initialize(): void {
@@ -33,8 +30,6 @@ export class CharacterManager {
     for (const p of profiles) {
       this.profiles.set(p.id, p);
     }
-
-    this.relationshipManager = new RelationshipManager(this.profiles);
 
     const occupiedPointIds = new Set<string>();
     const spawnSeedSalt = `init:${Date.now().toString(36)}`;
@@ -100,12 +95,6 @@ export class CharacterManager {
       }
     }
 
-    const ids = profiles.map((p) => p.id);
-    for (let i = 0; i < ids.length; i++) {
-      for (let j = i + 1; j < ids.length; j++) {
-        this.relationshipManager.initRelationshipPair(ids[i], ids[j]);
-      }
-    }
   }
 
   getProfile(charId: string): CharacterProfile {

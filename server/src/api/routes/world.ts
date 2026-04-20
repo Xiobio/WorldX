@@ -41,6 +41,7 @@ router.get("/info", (_req, res) => {
     mainAreaPoints: wm.getMainAreaPoints(),
     worldSize: wm.getWorldSize(),
     mainAreaDialogueRadiusPx: wm.getMainAreaDialogueDistanceThreshold(),
+    timelineTickCount: appContext.timelineManager.getTickCount(),
   });
 });
 

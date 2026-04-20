@@ -109,28 +109,6 @@ export interface MemoryEntry {
   embedding?: number[];
 }
 
-/** 关系（A→B，非对称） */
-export interface Relationship {
-  characterId: string;
-  targetId: string;
-  familiarity: number;
-  trust: number;
-  affection: number;
-  respect: number;
-  tension: number;
-  romanticFlag: boolean;
-}
-
-export type RelationshipLabel =
-  | "stranger"
-  | "acquaintance"
-  | "friend"
-  | "close_friend"
-  | "crush"
-  | "lover"
-  | "rival"
-  | "frenemy";
-
 /** 日程计划 */
 export interface DailyPlan {
   characterId: string;

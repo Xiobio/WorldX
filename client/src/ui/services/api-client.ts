@@ -1,13 +1,11 @@
 import type {
   CharacterInfo,
   CharacterDetail,
-  RelationshipEdge,
   DiaryEntry,
   MemoryEntry,
   SimulationEvent,
   WorldTimeInfo,
   LocationInfo,
-  GraphData,
   GameTime,
   MainAreaPointInfo,
   SceneConfigInfo,
@@ -70,6 +68,7 @@ export interface WorldInfo {
   sceneConfig: SceneConfigInfo;
   sceneRuntime: SceneRuntimeInfo;
   mainAreaPoints?: MainAreaPointInfo[];
+  timelineTickCount?: number;
 }
 
 export type WorldSource = "user" | "library";
@@ -151,9 +150,6 @@ export const apiClient = {
     return fetchJSON(`/characters/${id}`);
   },
 
-  getRelationships(id: string): Promise<RelationshipEdge[]> {
-    return fetchJSON(`/characters/${id}/relationships`);
-  },
 
   getDiary(id: string, day?: number): Promise<DiaryEntry[]> {
     const q = day != null ? `?day=${day}` : "";
@@ -191,14 +187,6 @@ export const apiClient = {
 
   getHighlights(minScore = 6, limit = 20): Promise<SimulationEvent[]> {
     return fetchJSON(`/events/highlights?minScore=${minScore}&limit=${limit}`);
-  },
-
-  getGraph(): Promise<GraphData> {
-    return fetchJSON("/graph/current");
-  },
-
-  getGraphHistory(day: number): Promise<GraphData> {
-    return fetchJSON(`/graph/history/${day}`);
   },
 
   simulateTick(): Promise<{

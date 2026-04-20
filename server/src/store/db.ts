@@ -47,19 +47,6 @@ CREATE INDEX IF NOT EXISTS idx_mem_char ON memories(character_id);
 CREATE INDEX IF NOT EXISTS idx_mem_importance ON memories(character_id, importance DESC);
 CREATE INDEX IF NOT EXISTS idx_mem_time ON memories(character_id, game_day DESC, game_tick DESC);
 
-CREATE TABLE IF NOT EXISTS relationships (
-  character_id TEXT NOT NULL,
-  target_id TEXT NOT NULL,
-  familiarity REAL DEFAULT 0,
-  trust REAL DEFAULT 0,
-  affection REAL DEFAULT 0,
-  respect REAL DEFAULT 0,
-  tension REAL DEFAULT 0,
-  romantic_flag INTEGER DEFAULT 0,
-  updated_at TEXT DEFAULT (datetime('now')),
-  PRIMARY KEY (character_id, target_id)
-);
-
 CREATE TABLE IF NOT EXISTS character_states (
   character_id TEXT PRIMARY KEY,
   location TEXT NOT NULL,

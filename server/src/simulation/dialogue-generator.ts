@@ -6,7 +6,6 @@ import {
 } from "../llm/output-schemas.js";
 import type { CharacterManager } from "../core/character-manager.js";
 import type { WorldManager } from "../core/world-manager.js";
-import { updateEmotion } from "../core/emotion-manager.js";
 import type {
   DialogueResult,
   DialogueSession,
@@ -14,10 +13,6 @@ import type {
   GameTime,
 } from "../types/index.js";
 import { relativeTimeLabel } from "../utils/time-helpers.js";
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
-}
 
 export class DialogueGenerator {
   constructor(
@@ -150,7 +145,6 @@ export class DialogueGenerator {
         stateA: context.stateA,
         llmOutput: {
           memoriesGenerated: {},
-          relationshipDeltas: {},
           tags: ["fallback"],
           endReason: session.endReason ?? "模型收尾失败，已强制结束",
         },
@@ -167,35 +161,6 @@ export class DialogueGenerator {
     const profileB = this.characterManager.getProfile(responderId);
     const stateA = this.characterManager.getState(initiatorId);
     const stateB = this.characterManager.getState(responderId);
-
-    const relAB =
-      this.characterManager.relationshipManager.getRelationship(
-        initiatorId,
-        responderId,
-      ) ?? {
-        characterId: initiatorId,
-        targetId: responderId,
-        familiarity: 0,
-        trust: 0,
-        affection: 0,
-        respect: 0,
-        tension: 0,
-        romanticFlag: false,
-      };
-    const relBA =
-      this.characterManager.relationshipManager.getRelationship(
-        responderId,
-        initiatorId,
-      ) ?? {
-        characterId: responderId,
-        targetId: initiatorId,
-        familiarity: 0,
-        trust: 0,
-        affection: 0,
-        respect: 0,
-        tension: 0,
-        romanticFlag: false,
-      };
 
     const memoriesA = this.characterManager.memoryManager.retrieveMemories({
       characterId: initiatorId,
@@ -246,13 +211,11 @@ export class DialogueGenerator {
           profile: profileA,
           state: stateA,
           memoriesAboutOther: memoriesAtext,
-          relationship: relAB,
         },
         {
           profile: profileB,
           state: stateB,
           memoriesAboutOther: memoriesBtext,
-          relationship: relBA,
         },
       ],
     };
@@ -267,7 +230,6 @@ export class DialogueGenerator {
     stateA: { location: string };
     llmOutput: {
       memoriesGenerated: Record<string, string>;
-      relationshipDeltas: Record<string, Record<string, number | undefined>>;
       tags: string[];
       endReason?: string;
       hearsayGenerated?: Record<string, string>;
@@ -276,38 +238,6 @@ export class DialogueGenerator {
     const { session, gameTime, locationName, profileA, profileB, stateA, llmOutput } =
       params;
     const [initiatorId, responderId] = session.participants;
-
-    const deltasForA: Record<string, number> = {};
-    const deltasForB: Record<string, number> = {};
-
-    for (const [key, delta] of Object.entries(llmOutput.relationshipDeltas || {})) {
-      const lk = key.toLowerCase();
-      let target: Record<string, number>;
-
-      if (
-        key === initiatorId ||
-        key === profileA.name ||
-        lk.includes("a_to") ||
-        lk.includes("a→")
-      ) {
-        target = deltasForA;
-      } else if (
-        key === responderId ||
-        key === profileB.name ||
-        lk.includes("b_to") ||
-        lk.includes("b→")
-      ) {
-        target = deltasForB;
-      } else {
-        target = Object.keys(deltasForA).length === 0 ? deltasForA : deltasForB;
-      }
-
-      for (const [dim, val] of Object.entries(delta)) {
-        if (val !== undefined) {
-          target[dim] = clamp(val, -15, 15);
-        }
-      }
-    }
 
     const memA =
       llmOutput.memoriesGenerated?.[initiatorId] ??
@@ -371,86 +301,14 @@ export class DialogueGenerator {
       }
     }
 
-    if (Object.keys(deltasForA).length > 0) {
-      try {
-        this.characterManager.relationshipManager.updateRelationship(
-          initiatorId,
-          responderId,
-          deltasForA,
-        );
-      } catch {
-        // ignore missing pair
-      }
-    }
-    if (Object.keys(deltasForB).length > 0) {
-      try {
-        this.characterManager.relationshipManager.updateRelationship(
-          responderId,
-          initiatorId,
-          deltasForB,
-        );
-      } catch {
-        // ignore missing pair
-      }
-    }
-
-    this.applyDialogueEmotionShift(initiatorId, deltasForA);
-    this.applyDialogueEmotionShift(responderId, deltasForB);
-
     return {
       participants: [initiatorId, responderId],
       location: locationName,
       turns: session.transcript,
       memoriesGenerated: { [initiatorId]: memA, [responderId]: memB },
-      relationshipDeltas: {
-        [initiatorId]: deltasForA,
-        [responderId]: deltasForB,
-      },
       tags,
       endReason: llmOutput.endReason ?? session.endReason,
     };
-  }
-
-  private applyDialogueEmotionShift(
-    charId: string,
-    deltas: Record<string, number>,
-  ): void {
-    const positive =
-      (deltas.affection ?? 0) * 0.6 +
-      (deltas.trust ?? 0) * 0.5 +
-      (deltas.respect ?? 0) * 0.35;
-    const negative = (deltas.tension ?? 0) * 0.8;
-    const valence = Math.max(-2, Math.min(2, Math.round((positive - negative) / 6)));
-    const intensity = Math.max(
-      1,
-      Math.min(
-        5,
-        Math.round(
-          (Math.abs(deltas.affection ?? 0) +
-            Math.abs(deltas.trust ?? 0) +
-            Math.abs(deltas.respect ?? 0) +
-            Math.abs(deltas.tension ?? 0)) / 6,
-        ),
-      ),
-    );
-
-    if (valence === 0 && intensity <= 1) return;
-
-    const state = this.characterManager.getState(charId);
-    const next = updateEmotion(
-      {
-        valence: state.emotionValence,
-        arousal: state.emotionArousal,
-      },
-      {
-        valence,
-        intensity,
-      },
-    );
-    this.characterManager.updateState(charId, {
-      emotionValence: next.valence,
-      emotionArousal: next.arousal,
-    });
   }
 
   private normalizeSpeaker(

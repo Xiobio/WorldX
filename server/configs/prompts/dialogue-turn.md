@@ -10,7 +10,6 @@
 - 性格：{{traitsA}}
 - 说话倾向：{{styleA}}
 - 当前情绪：{{emotionA}}
-- 对B的关系：熟悉度{{familiarityAB}}，好感{{affectionAB}}，信任{{trustAB}}，紧张度{{tensionAB}}
 - 关于B的记忆：{{memoriesAaboutB}}
 - 最近听说的事：{{hearsayA}}
 - 发起对话的动机：{{motivation}}
@@ -19,7 +18,6 @@
 - 性格：{{traitsB}}
 - 说话倾向：{{styleB}}
 - 当前情绪：{{emotionB}}
-- 对A的关系：熟悉度{{familiarityBA}}，好感{{affectionBA}}，信任{{trustBA}}，紧张度{{tensionBA}}
 - 关于A的记忆：{{memoriesBaboutA}}
 - 最近听说的事：{{hearsayB}}
 

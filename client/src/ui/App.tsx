@@ -11,7 +11,6 @@ import { MapControls } from "./panels/MapControls";
 import { DialoguePanel } from "./panels/DialoguePanel";
 import { SceneTransition } from "./panels/SceneTransition";
 import { WorldIntroBanner } from "./panels/WorldIntroBanner";
-import { RelationshipGraph } from "./pages/RelationshipGraph";
 import { Timeline } from "./pages/Timeline";
 import { CreateWorldPage } from "./pages/CreateWorldPage";
 import { CreateWorldBackground } from "./pages/CreateWorldBackground";
@@ -89,7 +88,7 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   const [showMainAreaPointsOverlay, setShowMainAreaPointsOverlay] = useState(false);
   const [showInteractiveObjectsOverlay, setShowInteractiveObjectsOverlay] = useState(false);
   const isOverlayRoute =
-    location.pathname === "/graph" || location.pathname === "/timeline";
+    location.pathname === "/timeline";
   const hideMainChrome = isOverlayRoute || isCreateRoute;
   const ticksPerScene = worldInfo?.sceneRuntime.cycleTicks ?? 48;
   const showDayTransition = worldInfo?.sceneRuntime.transitionEnabled ?? false;
@@ -369,9 +368,7 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   }, [navigate]);
 
   const overlayContent =
-    location.pathname === "/graph" ? (
-      <RelationshipGraph />
-    ) : location.pathname === "/timeline" ? (
+    location.pathname === "/timeline" ? (
       <Timeline />
     ) : null;
 
@@ -420,7 +417,7 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
             onStopReplay={handleStopReplay}
             onHeightChange={setTopBarHeight}
           />
-          {worldInfo && (worldInfo.originalPrompt?.trim() || worldInfo.worldDescription?.trim()) && (
+          {worldInfo && (worldInfo.timelineTickCount ?? 1) === 0 && (worldInfo.originalPrompt?.trim() || worldInfo.worldDescription?.trim()) && (
             <WorldIntroBanner
               worldKey={worldInfo.currentWorldId || worldInfo.worldName}
               worldName={worldInfo.worldName}

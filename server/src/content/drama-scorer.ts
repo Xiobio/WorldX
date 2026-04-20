@@ -40,19 +40,6 @@ export function calculateDramScore(
       break;
     }
 
-    case "relationship_change": {
-      score = 2;
-      const deltas = event.data?.deltas ?? event.data?.relationshipDeltas;
-      if (deltas && typeof deltas === "object") {
-        for (const dim of Object.values(deltas) as number[]) {
-          const abs = Math.abs(dim);
-          if (abs >= 10) { score += 3; break; }
-          if (abs >= 5) { score += 1; break; }
-        }
-      }
-      break;
-    }
-
     case "emotion_shift": {
       score = 1;
       const intensity = event.data?.emotionalIntensity ?? event.data?.value;

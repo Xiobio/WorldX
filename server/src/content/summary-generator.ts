@@ -30,23 +30,7 @@ export async function generateDailySummary(
     })
     .filter((e) => e.type !== "dialogue" || e.data?.phase !== "turn");
 
-  const relEvents = eventStore
-    .queryEvents({
-      fromDay: gameDay,
-      toDay: gameDay,
-      type: "relationship_change",
-      limit: 20,
-    })
-    .filter((e) => e.type !== "dialogue" || e.data?.phase !== "turn");
-
-  const allNotable = [...highlightEvents];
-  for (const re of relEvents) {
-    if (!allNotable.find((e) => e.id === re.id)) {
-      allNotable.push(re);
-    }
-  }
-
-  const eventDescriptions = allNotable.map((e) => {
+  const eventDescriptions = highlightEvents.map((e) => {
     const tick = `Tick ${e.gameTick}`;
     const loc = e.location;
     const actors = [e.actorId, e.targetId].filter(Boolean).join(" & ");

@@ -220,6 +220,10 @@ export class TimelineManager {
     return this.worldDir;
   }
 
+  getTickCount(): number {
+    return this.tickCount;
+  }
+
   readTimelineEvents(worldDir: string, timelineId: string): TimelineFrame[] {
     const eventsPath = this.getTimelineEventsPath(worldDir, timelineId);
     if (!fs.existsSync(eventsPath)) return [];
