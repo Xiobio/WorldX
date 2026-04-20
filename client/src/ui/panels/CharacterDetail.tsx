@@ -146,10 +146,9 @@ export function CharacterDetail({
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexShrink: 0 }}>
-        <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>
+        <span style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>
           {profile.name}
         </span>
-        <span style={{ fontSize: 11, color: "#74b9ff" }}>{profile.mbtiType}</span>
         <button
           onClick={() => onToggleFollow(charId)}
           style={{

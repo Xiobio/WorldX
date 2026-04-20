@@ -18,7 +18,6 @@ export interface MovementAnchor {
 export class CharacterSprite extends Phaser.GameObjects.Container {
   characterId: string;
   characterName: string;
-  mbtiType: string;
   currentLocationId = "";
   mainAreaPointId: string | null = null;
   currentAction: string | null = null;
@@ -49,10 +48,11 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
   private dialogueBubbleMainEl: HTMLDivElement | null = null;
   private dialogueBubbleInnerWrapEl: HTMLDivElement | null = null;
   private dialogueBubbleInnerEl: HTMLDivElement | null = null;
-  private mbtiEl: HTMLDivElement | null = null;
+
   private nameRowEl: HTMLDivElement | null = null;
   private nameEl: HTMLDivElement | null = null;
   private actionIconEl: HTMLSpanElement | null = null;
+  private actionPillEl: HTMLDivElement | null = null;
   private hasSprite = false;
   private facing: FacingDirection = "down";
   private overlayZoom = 1;
@@ -66,7 +66,6 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     config: {
       characterId: string;
       name: string;
-      mbti: string;
       color: number;
       displayMetrics: CharacterDisplayMetrics;
     }
@@ -74,7 +73,6 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     super(scene, x, y);
     this.characterId = config.characterId;
     this.characterName = config.name;
-    this.mbtiType = config.mbti;
     this.displayMetrics = config.displayMetrics;
     this.hasSprite = scene.textures.exists(config.characterId);
     this.createVisuals(config.color);
@@ -165,16 +163,20 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     icon.className = "character-label__icon";
     icon.style.display = "none";
 
+    const actionPill = document.createElement("div");
+    actionPill.className = "character-label__action-pill";
+    actionPill.style.display = "none";
+
     nameRow.append(name, icon);
-    root.append(nameRow);
+    root.append(nameRow, actionPill);
     overlayRoot.appendChild(root);
     this.createDomDialogueBubble(overlayRoot);
 
     this.labelRoot = root;
-    this.mbtiEl = null;
     this.nameRowEl = nameRow;
     this.nameEl = name;
     this.actionIconEl = icon;
+    this.actionPillEl = actionPill;
     this.updateDomLabelStyle();
     this.updateDomLabelVisibility();
     this.updateDomLabelPosition();
@@ -525,6 +527,17 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     this.actionIconEl.style.display = emoji ? "inline-block" : "none";
   }
 
+  setActionLabel(text: string | null): void {
+    if (!this.actionPillEl) return;
+    if (text) {
+      this.actionPillEl.textContent = text;
+      this.actionPillEl.style.display = "block";
+    } else {
+      this.actionPillEl.style.display = "none";
+      this.actionPillEl.textContent = "";
+    }
+  }
+
   clearTransientUi(): void {
     if (this.bubbleHideTimer) {
       this.bubbleHideTimer.remove(false);
@@ -557,8 +570,8 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     if (!this.labelRoot || !this.nameRowEl || !this.nameEl || !this.actionIconEl) return;
 
     const zoom = Math.max(this.overlayZoom, 0.01);
-    const nameSize = Phaser.Math.Clamp(this.displayMetrics.labelNameWorldSize * zoom, 10, 26);
-    const iconSize = Phaser.Math.Clamp(this.displayMetrics.labelIconWorldSize * zoom, 10, 22);
+    const nameSize = Phaser.Math.Clamp(this.displayMetrics.labelNameWorldSize * zoom, 9, 20);
+    const iconSize = Phaser.Math.Clamp(this.displayMetrics.labelIconWorldSize * zoom, 9, 18);
     const gap = Phaser.Math.Clamp(this.displayMetrics.labelGapWorld * zoom, 1, 6);
 
     this.labelRoot.style.gap = `${gap}px`;
@@ -566,6 +579,13 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     this.nameRowEl.style.gap = `${Math.max(2, gap)}px`;
     this.nameEl.style.fontSize = `${nameSize}px`;
     this.actionIconEl.style.fontSize = `${iconSize}px`;
+
+    if (this.actionPillEl) {
+      const actionPillSize = Phaser.Math.Clamp(this.displayMetrics.labelNameWorldSize * zoom * 0.75, 9, 18);
+      this.actionPillEl.style.fontSize = `${actionPillSize}px`;
+      this.actionPillEl.style.padding = `${Math.max(2, actionPillSize * 0.3)}px ${Math.max(6, actionPillSize * 0.8)}px`;
+    }
+
     this.updateDialogueBubbleStyle();
   }
 
@@ -786,10 +806,10 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
     this.dialogueBubbleMainEl = null;
     this.dialogueBubbleInnerWrapEl = null;
     this.dialogueBubbleInnerEl = null;
-    this.mbtiEl = null;
     this.nameRowEl = null;
     this.nameEl = null;
     this.actionIconEl = null;
+    this.actionPillEl = null;
     super.destroy(fromScene);
   }
 }

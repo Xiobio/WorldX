@@ -30,7 +30,7 @@ export interface SceneRuntimeInfo {
 export interface CharacterInfo {
   id: string;
   name: string;
-  mbti: string;
+  role: string;
   nickname: string;
   location: string;
   mainAreaPointId?: string | null;
@@ -43,7 +43,7 @@ export interface CharacterInfo {
 export interface CharacterProfile {
   id: string;
   name: string;
-  mbtiType: string;
+  role: string;
   nickname: string;
   backstory?: string;
   appearanceHint?: string;
@@ -154,7 +154,7 @@ export interface MainAreaPointInfo {
 }
 
 export interface GraphData {
-  nodes: { id: string; name: string; mbti: string }[];
+  nodes: { id: string; name: string; role: string }[];
   edges: { source: string; target: string; label: string; strength: number }[];
   generatedAt?: GameTime | string;
 }

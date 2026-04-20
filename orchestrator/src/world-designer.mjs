@@ -6,14 +6,14 @@ import { normalizeWorldDesign } from "./world-design-utils.mjs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 export async function designWorld(userPrompt) {
-  const { arkChatJSON } = await import("./models/ark-client.mjs");
+  const { chatJSON } = await import("./models/llm-client.mjs");
 
   const template = readFileSync(join(__dirname, "../prompts/design-world.md"), "utf-8");
   const prompt = template.replace(/\{\{userPrompt\}\}/g, userPrompt);
 
   console.log("[WorldDesigner] Designing world from prompt...");
 
-  const rawResult = await arkChatJSON({
+  const rawResult = await chatJSON({
     systemMessage: "You are an expert world designer for AI social simulations. Always respond with valid JSON.",
     userMessage: prompt,
     temperature: 0.7,

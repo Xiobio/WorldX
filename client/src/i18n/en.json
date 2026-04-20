@@ -7,7 +7,8 @@
     "failedPrefix": "Failed: {{error}}",
     "defaultEndTransition": "Night falls, and the day's bustle fades to silence...",
     "defaultStartTransitionOpen": "The scene shifts quietly to a new act",
-    "defaultStartTransitionClosed": "A new day begins"
+    "defaultStartTransitionClosed": "A new day begins",
+    "closeWorldIntro": "Close world intro"
   },
   "create": {
     "brand": "WorldX",
@@ -62,7 +63,7 @@
     "statusSwitchingWorld": "Switching World",
     "statusSwitchingTimeline": "Switching Timeline",
     "statusCreatingTimeline": "Creating Timeline",
-    "statusSimulating": "Simulating",
+    "statusSimulating": "Running",
     "statusAutoPlay": "Auto Play",
     "statusPaused": "Paused",
     "statusError": "Error",
@@ -74,6 +75,7 @@
     "run": "Run",
     "replay": "Replay",
     "noReplayData": "No tick data to replay yet",
+    "noReplayDataAlert": "The current timeline has no data yet. Run the simulation for a while first!",
     "switchToReplay": "Switch to replay mode",
     "pauseRun": "Pause",
     "pauseReplay": "Pause",
@@ -105,7 +107,9 @@
     "devPoints": "Points",
     "devInteractive": "Interactive",
     "myWorlds": "My Worlds",
-    "sampleWorlds": "Sample Worlds"
+    "sampleWorlds": "Sample Worlds",
+    "enableDevMode": "Enable Developer Mode",
+    "disableDevMode": "Disable Developer Mode"
   },
   "sidePanel": {
     "charPanel": "Character",

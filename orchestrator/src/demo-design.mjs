@@ -12,7 +12,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, "../..");
 dotenv.config({ path: join(ROOT, ".env") });
 
-const { arkChat } = await import("./models/ark-client.mjs");
+const { chat } = await import("./models/llm-client.mjs");
 const { normalizeWorldDesign } = await import("./world-design-utils.mjs");
 
 const userPrompt = process.argv.slice(2).join(" ") ||
@@ -24,7 +24,7 @@ const prompt = template.replace(/\{\{userPrompt\}\}/g, userPrompt);
 console.log("━━━ Calling LLM ━━━");
 console.log(`Prompt: ${userPrompt}\n`);
 
-const raw = await arkChat(
+const raw = await chat(
   [
     { role: "system", content: "You are an expert world designer for AI social simulations. Always respond with valid JSON." },
     { role: "user", content: prompt },

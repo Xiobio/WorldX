@@ -64,22 +64,15 @@ export function createCharacterDisplayMetrics(
     bubblePadding: Math.max(8, spriteHeight * 0.06),
     bubbleTailHeight: Math.max(4, spriteHeight * 0.035),
     bubbleCornerRadius: Math.max(6, spriteHeight * 0.045),
-    labelNameWorldSize: spriteWidth * 0.25,
-    labelMbtiWorldSize: spriteWidth * 0.25,
-    labelIconWorldSize: spriteWidth * 0.26,
+    labelNameWorldSize: spriteWidth * 0.20,
+    labelMbtiWorldSize: spriteWidth * 0.20,
+    labelIconWorldSize: spriteWidth * 0.21,
     labelGapWorld: spriteWidth * 0.07,
     labelMbtiPadXWorld: spriteWidth * 0.14,
     labelMbtiPadYWorld: spriteWidth * 0.045,
     sortFootYOffset: spriteHeight * 0.16,
   };
 }
-
-export const MBTI_COLORS: Record<string, number> = {
-  INTJ: 0x6c5ce7, INTP: 0x74b9ff, ENTJ: 0xd63031, ENTP: 0xe17055,
-  INFJ: 0x00b894, INFP: 0xfd79a8, ENFJ: 0xfdcb6e, ENFP: 0xe84393,
-  ISTJ: 0x636e72, ISFJ: 0xdfe6e9, ESTJ: 0x2d3436, ESFJ: 0xfab1a0,
-  ISTP: 0x0984e3, ISFP: 0x55efc4, ESTP: 0xf39c12, ESFP: 0xff6348,
-};
 
 export const CHARACTER_COLORS = [
   0x6c5ce7, 0x74b9ff, 0xd63031, 0xe17055,

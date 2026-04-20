@@ -16,7 +16,7 @@ const NETWORK_RETRY_DELAY_MS = 1_000;
 const MAX_NETWORK_RETRIES = 2;
 const DEFAULT_STRUCTURED_OUTPUT_MODE = resolveStructuredOutputMode(
   undefined,
-  process.env.LLM_STRUCTURED_OUTPUT_MODE,
+  process.env.SIMULATION_STRUCTURED_OUTPUT_MODE,
 );
 const structuredOutputCapabilityCache = new Map<string, StructuredOutputMode>();
 
@@ -25,7 +25,7 @@ function getRequestTimeoutMs(overrideMs?: number): number {
     return overrideMs as number;
   }
 
-  const n = Number(process.env.LLM_REQUEST_TIMEOUT_MS);
+  const n = Number(process.env.SIMULATION_TIMEOUT_MS);
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_REQUEST_TIMEOUT_MS;
 }
 
@@ -47,7 +47,7 @@ export class LLMClient {
     const messages = [...params.messages];
     const structuredOutputMode = resolveStructuredOutputMode(
       options.structuredOutputMode,
-      process.env.LLM_STRUCTURED_OUTPUT_MODE,
+      process.env.SIMULATION_STRUCTURED_OUTPUT_MODE,
       DEFAULT_STRUCTURED_OUTPUT_MODE,
     );
 
@@ -308,11 +308,10 @@ function sleep(ms: number): Promise<void> {
 }
 
 function buildConfigFromEnv(): LLMConfig {
-  // Defaults match Volcengine Ark「Coding 套餐」OpenAI 兼容端点（控制台「快速配置」）
   return {
     provider: "openai-compatible",
-    baseURL: process.env.LLM_BASE_URL ?? "https://ark.cn-beijing.volces.com/api/coding/v3",
-    apiKey: process.env.LLM_API_KEY ?? "",
-    defaultModel: process.env.LLM_DEFAULT_MODEL ?? "ark-code-latest",
+    baseURL: process.env.SIMULATION_BASE_URL ?? "https://openrouter.ai/api/v1",
+    apiKey: process.env.SIMULATION_API_KEY ?? "",
+    defaultModel: process.env.SIMULATION_MODEL ?? "google/gemini-2.5-flash-preview",
   };
 }

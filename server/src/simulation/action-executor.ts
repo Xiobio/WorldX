@@ -3,7 +3,7 @@ import type {
   SimulationEvent,
   GameTime,
 } from "../types/index.js";
-import type { WorldManager } from "../core/world-manager.js";
+import type { WorldManager, MainAreaZone } from "../core/world-manager.js";
 import type { CharacterManager } from "../core/character-manager.js";
 import { generateId } from "../utils/id-generator.js";
 import { absoluteTick } from "../utils/time-helpers.js";
@@ -215,10 +215,18 @@ export function executeAction(
         break;
       }
 
-      const nextPointId = worldManager.pickDistantMainAreaPointId(
-        state.mainAreaPointId,
-        `${charId}:${gameTime.day}:${gameTime.tick}:within`,
-      );
+      const zoneSeed = `${charId}:${gameTime.day}:${gameTime.tick}:within`;
+      const zoneMatch = decision.targetId?.match(/^main_area:(.+)$/);
+      let nextPointId: string | null;
+      if (zoneMatch) {
+        const targetZone = zoneMatch[1] as MainAreaZone;
+        nextPointId = worldManager.pickPointInZone(targetZone, zoneSeed, state.mainAreaPointId)
+          ?? worldManager.pickDistantMainAreaPointId(state.mainAreaPointId, zoneSeed);
+      } else {
+        nextPointId = worldManager.pickDistantMainAreaPointId(
+          state.mainAreaPointId, zoneSeed,
+        );
+      }
       if (!nextPointId || nextPointId === state.mainAreaPointId) {
         break;
       }

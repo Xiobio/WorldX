@@ -82,7 +82,11 @@ async function main() {
   purgeFailedCharacters(charsDir, worldDesign);
 
   console.log("\n━━━ Phase 4: Generating Simulation Configs ━━━");
-  const { worldConfig, characterConfigs, sceneConfig } = generateConfigs(worldDesign, worldDir);
+  const { worldConfig, characterConfigs, sceneConfig } = generateConfigs(
+    worldDesign,
+    worldDir,
+    { originalPrompt: userPrompt },
+  );
 
   if (!KEEP_GENERATION_ARTIFACTS) {
     cleanupIntermediateImages(worldDir);

@@ -1,0 +1,17 @@
+{
+  "sceneType": "open",
+  "startTime": "08:00",
+  "tickDurationMinutes": 15,
+  "maxTicks": 48,
+  "displayFormat": "fantasy",
+  "description": "This is a quiet medieval fantasy RPG village after the legendary hero defeated the Dark Lord and left to explore other lands. The villagers who once dedicated their lives to supporting the hero's quest now find themselves with no clear purpose, navigating mundane daily life while searching for new meaning.",
+  "multiDay": {
+    "enabled": true,
+    "endOfDayText": "The sun dips below the horizon, villagers return to their cottages to rest as the village falls quiet for the night.",
+    "newDayText": "The golden sun rises over the hills, the village wakes up to another quiet day without the threat of the Dark Lord.",
+    "nextDayStartTime": "08:00"
+  },
+  "worldName": "Post-Hero Greenhollow Village",
+  "worldDescription": "This is a quiet medieval fantasy RPG village after the legendary hero defeated the Dark Lord and left to explore other lands. The villagers who once dedicated their lives to supporting the hero's quest now find themselves with no clear purpose, navigating mundane daily life while searching for new meaning.",
+  "characterCount": 6
+}

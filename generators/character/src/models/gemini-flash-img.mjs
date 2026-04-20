@@ -1,10 +1,13 @@
 /**
- * Gemini 3.1 Flash Image (Nano Banana 2) via OpenRouter.
- * Simplified client for character sprite generation.
+ * Image generation client — OpenAI-compatible chat completions with image output.
+ * Reads IMAGE_GEN_* env vars. Simplified client for character sprite generation.
  */
 
-const MODEL = "google/gemini-3.1-flash-image-preview";
-const REQUEST_TIMEOUT_MS = parseInt(process.env.GEMINI_REQUEST_TIMEOUT_MS || "180000", 10);
+const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
+const DEFAULT_MODEL = "google/gemini-3.1-flash-image-preview";
+const MODEL = process.env.IMAGE_GEN_MODEL || DEFAULT_MODEL;
+const BASE_URL = process.env.IMAGE_GEN_BASE_URL || DEFAULT_BASE_URL;
+const REQUEST_TIMEOUT_MS = parseInt(process.env.IMAGE_GEN_TIMEOUT_MS || "180000", 10);
 
 /**
  * Image editing: send reference image + text instruction -> new image.
@@ -13,14 +16,14 @@ const REQUEST_TIMEOUT_MS = parseInt(process.env.GEMINI_REQUEST_TIMEOUT_MS || "18
  * @returns {Buffer} PNG image buffer
  */
 export async function editImage(text, imageBuffer, { imageSize = "1K" } = {}) {
-  const API_KEY = process.env.OPENROUTER_API_KEY || "";
+  const API_KEY = process.env.IMAGE_GEN_API_KEY || "";
   const base64 = imageBuffer.toString("base64");
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
   try {
-    const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    const res = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${API_KEY}`,
@@ -48,14 +51,14 @@ export async function editImage(text, imageBuffer, { imageSize = "1K" } = {}) {
 
     if (!res.ok) {
       const err = await res.text();
-      throw new Error(`Flash Image Edit API error ${res.status}: ${err}`);
+      throw new Error(`Image Gen Edit API error ${res.status}: ${err}`);
     }
 
     const data = await res.json();
     return extractImageBuffer(data);
   } catch (e) {
     if (e.name === "AbortError") {
-      throw new Error(`Flash Image Edit request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
+      throw new Error(`Image Gen Edit request timed out after ${REQUEST_TIMEOUT_MS / 1000}s`);
     }
     throw e;
   } finally {
@@ -65,7 +68,7 @@ export async function editImage(text, imageBuffer, { imageSize = "1K" } = {}) {
 
 function extractImageBuffer(data) {
   const message = data.choices?.[0]?.message;
-  if (!message) throw new Error("No message in Flash Image response");
+  if (!message) throw new Error("No message in Image Gen response");
 
   if (message.images && message.images.length > 0) {
     const url = message.images[0].image_url.url;
@@ -88,5 +91,5 @@ function extractImageBuffer(data) {
     }
   }
 
-  throw new Error("No image found in Flash Image response");
+  throw new Error("No image found in Image Gen response");
 }

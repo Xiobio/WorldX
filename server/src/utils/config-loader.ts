@@ -133,7 +133,7 @@ function normalizeCharacterProfile(raw: any): CharacterProfile | null {
   return {
     id: raw.id,
     name: raw.name,
-    mbtiType: raw.mbtiType || raw.mbti || "NPC",
+    role: raw.role || "NPC",
     nickname: raw.nickname || raw.name,
     startPosition: startLocation,
     backstory: typeof raw.backstory === "string" ? raw.backstory : undefined,

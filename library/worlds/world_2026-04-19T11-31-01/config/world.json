@@ -1,0 +1,503 @@
+{
+  "worldName": "Post-Hero Greenhollow Village",
+  "worldDescription": "This is a quiet medieval fantasy RPG village after the legendary hero defeated the Dark Lord and left to explore other lands. The villagers who once dedicated their lives to supporting the hero's quest now find themselves with no clear purpose, navigating mundane daily life while searching for new meaning.",
+  "worldSocialContext": "All villagers know each other well and share memories of fighting against the Dark Lord's forces. There is no more danger or common goal to unite them, so most interactions are casual, with an undercurrent of quiet uncertainty about the future.",
+  "contentLanguage": "en",
+  "scene": {
+    "sceneType": "open",
+    "startTime": "08:00",
+    "tickDurationMinutes": 15,
+    "maxTicks": 48,
+    "displayFormat": "fantasy",
+    "description": "This is a quiet medieval fantasy RPG village after the legendary hero defeated the Dark Lord and left to explore other lands. The villagers who once dedicated their lives to supporting the hero's quest now find themselves with no clear purpose, navigating mundane daily life while searching for new meaning.",
+    "multiDay": {
+      "enabled": true,
+      "endOfDayText": "The sun dips below the horizon, villagers return to their cottages to rest as the village falls quiet for the night.",
+      "newDayText": "The golden sun rises over the hills, the village wakes up to another quiet day without the threat of the Dark Lord.",
+      "nextDayStartTime": "08:00"
+    }
+  },
+  "worldActions": [
+    {
+      "id": "stroll_around_village",
+      "name": "Stroll Around the Village",
+      "description": "Wander through the village paths and observe the daily life of other villagers",
+      "availableWhenState": [
+        "available"
+      ],
+      "duration": 3,
+      "effects": [
+        {
+          "type": "character_need",
+          "target": "boredom",
+          "value": -5
+        },
+        {
+          "type": "character_need",
+          "target": "curiosity",
+          "value": 5
+        }
+      ],
+      "repeatable": true
+    },
+    {
+      "id": "chat_with_villager",
+      "name": "Chat with Fellow Villager",
+      "description": "Strike up a casual conversation with a nearby villager about daily life",
+      "availableWhenState": [
+        "available"
+      ],
+      "duration": 2,
+      "effects": [
+        {
+          "type": "character_need",
+          "target": "loneliness",
+          "value": -8
+        }
+      ],
+      "repeatable": true
+    },
+    {
+      "id": "ponder_existence",
+      "name": "Ponder Life Purpose",
+      "description": "Stand still and think about what you want to do with your life now that the world is saved",
+      "availableWhenState": [
+        "available"
+      ],
+      "duration": 4,
+      "effects": [
+        {
+          "type": "character_need",
+          "target": "contemplation",
+          "value": 10
+        }
+      ],
+      "repeatable": true
+    }
+  ],
+  "locations": [
+    {
+      "id": "main_area",
+      "name": "主区域",
+      "description": "This is a quiet medieval fantasy RPG village after the legendary hero defeated the Dark Lord and left to explore other lands. The villagers who once dedicated their lives to supporting the hero's quest now find themselves with no clear purpose, navigating mundane daily life while searching for new meaning.",
+      "adjacentLocations": [
+        "general_store",
+        "healer_hut",
+        "blacksmith_workshop",
+        "village_square"
+      ],
+      "objects": []
+    },
+    {
+      "id": "general_store",
+      "name": "General Store",
+      "description": "Empty general store that used to sell supplies to adventurers, now has no goods to sell",
+      "adjacentLocations": [
+        "main_area",
+        "healer_hut",
+        "blacksmith_workshop",
+        "village_square"
+      ],
+      "objects": [
+        {
+          "id": "browse_empty_shelves",
+          "name": "Browse Empty Shelves",
+          "locationId": "general_store",
+          "defaultState": "available",
+          "capacity": 2,
+          "interactions": [
+            {
+              "id": "browse_empty_shelves",
+              "name": "Browse Empty Shelves",
+              "description": "Look through the empty shelves that once held adventure supplies",
+              "availableWhenState": [
+                "available"
+              ],
+              "duration": 2,
+              "effects": [
+                {
+                  "type": "character_need",
+                  "target": "nostalgia",
+                  "value": 6
+                }
+              ],
+              "repeatable": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healer_hut",
+      "name": "Healer's Hut",
+      "description": "Small healer's hut that used to treat injured adventurers and villagers, now has no patients",
+      "adjacentLocations": [
+        "main_area",
+        "general_store",
+        "blacksmith_workshop",
+        "village_square"
+      ],
+      "objects": [
+        {
+          "id": "sort_herbs",
+          "name": "Sort Dried Herbs",
+          "locationId": "healer_hut",
+          "defaultState": "available",
+          "capacity": 2,
+          "interactions": [
+            {
+              "id": "sort_herbs",
+              "name": "Sort Dried Herbs",
+              "description": "Sort through the surplus dried herbs that are no longer needed for treating battle wounds",
+              "availableWhenState": [
+                "available"
+              ],
+              "duration": 3,
+              "effects": [
+                {
+                  "type": "character_need",
+                  "target": "boredom",
+                  "value": -4
+                }
+              ],
+              "repeatable": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "blacksmith_workshop",
+      "name": "Blacksmith's Workshop",
+      "description": "Smithy that forged the hero's legendary sword, now only produces household cutlery",
+      "adjacentLocations": [
+        "main_area",
+        "general_store",
+        "healer_hut",
+        "village_square"
+      ],
+      "objects": [
+        {
+          "id": "forge_spoon",
+          "name": "Forge a Spoon",
+          "locationId": "blacksmith_workshop",
+          "defaultState": "available",
+          "capacity": 2,
+          "interactions": [
+            {
+              "id": "forge_spoon",
+              "name": "Forge a Spoon",
+              "description": "Hammer a new metal spoon for household use",
+              "availableWhenState": [
+                "available"
+              ],
+              "duration": 5,
+              "effects": [
+                {
+                  "type": "character_need",
+                  "target": "sense_of_accomplishment",
+                  "value": 7
+                }
+              ],
+              "repeatable": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "village_square",
+      "name": "Village Square",
+      "description": "Central open square where villagers gather to chat and pass time",
+      "adjacentLocations": [
+        "main_area",
+        "general_store",
+        "healer_hut",
+        "blacksmith_workshop"
+      ],
+      "objects": [
+        {
+          "id": "sit_on_bench",
+          "name": "Sit on the Bench",
+          "locationId": "village_square",
+          "defaultState": "available",
+          "capacity": 2,
+          "interactions": [
+            {
+              "id": "sit_on_bench",
+              "name": "Sit on the Bench",
+              "description": "Sit on the wooden bench in the square to rest and watch others pass by",
+              "availableWhenState": [
+                "available"
+              ],
+              "duration": 2,
+              "effects": [
+                {
+                  "type": "character_need",
+                  "target": "tiredness",
+                  "value": -5
+                }
+              ],
+              "repeatable": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "mainAreaPoints": [
+    {
+      "id": "main_area_point_1",
+      "name": "主区域点位1",
+      "x": 1404,
+      "y": 732,
+      "adjacentPointIds": [
+        "main_area_point_18"
+      ]
+    },
+    {
+      "id": "main_area_point_2",
+      "name": "主区域点位2",
+      "x": 60,
+      "y": 732,
+      "adjacentPointIds": [
+        "main_area_point_21"
+      ]
+    },
+    {
+      "id": "main_area_point_3",
+      "name": "主区域点位3",
+      "x": 2636,
+      "y": 1180,
+      "adjacentPointIds": [
+        "main_area_point_10"
+      ]
+    },
+    {
+      "id": "main_area_point_4",
+      "name": "主区域点位4",
+      "x": 732,
+      "y": 1180,
+      "adjacentPointIds": [
+        "main_area_point_24"
+      ]
+    },
+    {
+      "id": "main_area_point_5",
+      "name": "主区域点位5",
+      "x": 1852,
+      "y": 60,
+      "adjacentPointIds": [
+        "main_area_point_15"
+      ]
+    },
+    {
+      "id": "main_area_point_6",
+      "name": "主区域点位6",
+      "x": 1404,
+      "y": 1404,
+      "adjacentPointIds": [
+        "main_area_point_23"
+      ]
+    },
+    {
+      "id": "main_area_point_7",
+      "name": "主区域点位7",
+      "x": 2076,
+      "y": 732,
+      "adjacentPointIds": [
+        "main_area_point_17"
+      ]
+    },
+    {
+      "id": "main_area_point_8",
+      "name": "主区域点位8",
+      "x": 1740,
+      "y": 1068,
+      "adjacentPointIds": [
+        "main_area_point_16"
+      ]
+    },
+    {
+      "id": "main_area_point_9",
+      "name": "主区域点位9",
+      "x": 844,
+      "y": 732,
+      "adjacentPointIds": [
+        "main_area_point_18"
+      ]
+    },
+    {
+      "id": "main_area_point_10",
+      "name": "主区域点位10",
+      "x": 2188,
+      "y": 1180,
+      "adjacentPointIds": [
+        "main_area_point_3"
+      ]
+    },
+    {
+      "id": "main_area_point_11",
+      "name": "主区域点位11",
+      "x": 2524,
+      "y": 732,
+      "adjacentPointIds": [
+        "main_area_point_17"
+      ]
+    },
+    {
+      "id": "main_area_point_12",
+      "name": "主区域点位12",
+      "x": 1068,
+      "y": 1292,
+      "adjacentPointIds": [
+        "main_area_point_24"
+      ]
+    },
+    {
+      "id": "main_area_point_13",
+      "name": "主区域点位13",
+      "x": 508,
+      "y": 844,
+      "adjacentPointIds": [
+        "main_area_point_19",
+        "main_area_point_20"
+      ]
+    },
+    {
+      "id": "main_area_point_14",
+      "name": "主区域点位14",
+      "x": 1740,
+      "y": 732,
+      "adjacentPointIds": [
+        "main_area_point_22"
+      ]
+    },
+    {
+      "id": "main_area_point_15",
+      "name": "主区域点位15",
+      "x": 1852,
+      "y": 396,
+      "adjacentPointIds": [
+        "main_area_point_5"
+      ]
+    },
+    {
+      "id": "main_area_point_16",
+      "name": "主区域点位16",
+      "x": 1628,
+      "y": 1292,
+      "adjacentPointIds": [
+        "main_area_point_8"
+      ]
+    },
+    {
+      "id": "main_area_point_17",
+      "name": "主区域点位17",
+      "x": 2300,
+      "y": 844,
+      "adjacentPointIds": [
+        "main_area_point_11",
+        "main_area_point_7"
+      ]
+    },
+    {
+      "id": "main_area_point_18",
+      "name": "主区域点位18",
+      "x": 1180,
+      "y": 732,
+      "adjacentPointIds": [
+        "main_area_point_1",
+        "main_area_point_9"
+      ]
+    },
+    {
+      "id": "main_area_point_19",
+      "name": "主区域点位19",
+      "x": 508,
+      "y": 620,
+      "adjacentPointIds": [
+        "main_area_point_13"
+      ]
+    },
+    {
+      "id": "main_area_point_20",
+      "name": "主区域点位20",
+      "x": 508,
+      "y": 1068,
+      "adjacentPointIds": [
+        "main_area_point_13"
+      ]
+    },
+    {
+      "id": "main_area_point_21",
+      "name": "主区域点位21",
+      "x": 284,
+      "y": 732,
+      "adjacentPointIds": [
+        "main_area_point_2"
+      ]
+    },
+    {
+      "id": "main_area_point_22",
+      "name": "主区域点位22",
+      "x": 1852,
+      "y": 620,
+      "adjacentPointIds": [
+        "main_area_point_14"
+      ]
+    },
+    {
+      "id": "main_area_point_23",
+      "name": "主区域点位23",
+      "x": 1292,
+      "y": 1292,
+      "adjacentPointIds": [
+        "main_area_point_6"
+      ]
+    },
+    {
+      "id": "main_area_point_24",
+      "name": "主区域点位24",
+      "x": 956,
+      "y": 1180,
+      "adjacentPointIds": [
+        "main_area_point_12",
+        "main_area_point_4"
+      ]
+    }
+  ],
+  "worldSize": {
+    "width": 2752,
+    "height": 1536,
+    "tileSize": 8,
+    "gridWidth": 344,
+    "gridHeight": 192
+  },
+  "metadata": {
+    "worldName": "Post-Hero Greenhollow Village",
+    "worldDescription": "This is a quiet medieval fantasy RPG village after the legendary hero defeated the Dark Lord and left to explore other lands. The villagers who once dedicated their lives to supporting the hero's quest now find themselves with no clear purpose, navigating mundane daily life while searching for new meaning.",
+    "worldSocialContext": "All villagers know each other well and share memories of fighting against the Dark Lord's forces. There is no more danger or common goal to unite them, so most interactions are casual, with an undercurrent of quiet uncertainty about the future.",
+    "sceneType": "open",
+    "timeConfig": {
+      "startTime": "08:00",
+      "tickDurationMinutes": 15,
+      "maxTicks": 48,
+      "displayFormat": "fantasy"
+    },
+    "multiDay": {
+      "enabled": true,
+      "endOfDayText": "The sun dips below the horizon, villagers return to their cottages to rest as the village falls quiet for the night.",
+      "newDayText": "The golden sun rises over the hills, the village wakes up to another quiet day without the threat of the Dark Lord.",
+      "nextDayStartTime": "08:00"
+    },
+    "mapPlan": {
+      "buildingMode": "mostly_scenic",
+      "compositionNotes": "Central stone path runs east-west, with buildings and open grassy areas lining both sides",
+      "worldFunctionSummary": "Casual rural village space for villagers to wander, socialize, and carry out daily domestic tasks",
+      "regionDesignNotes": "Four core areas: three enterable wooden buildings on the west, north and east sides, plus a central open village square"
+    },
+    "originalPrompt": "A RPG village after the hero saved the world and left. The NPCs must figure out what to do with their lives now. Characters: a shopkeeper who strolls around town every day with nothing to sell, a healer with no patients, a blacksmith who spent years forging the hero's legendary sword but now makes spoons, a beggar,  a child who insists they are the next hero, and a philosophical village chief."
+  },
+  "originalPrompt": "A RPG village after the hero saved the world and left. The NPCs must figure out what to do with their lives now. Characters: a shopkeeper who strolls around town every day with nothing to sell, a healer with no patients, a blacksmith who spent years forging the hero's legendary sword but now makes spoons, a beggar,  a child who insists they are the next hero, and a philosophical village chief."
+}

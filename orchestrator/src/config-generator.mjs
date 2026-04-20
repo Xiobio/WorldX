@@ -3,8 +3,12 @@ import { join } from "path";
 import { normalizeWorldDesign } from "./world-design-utils.mjs";
 import { buildMainAreaPoints } from "./main-area-points.mjs";
 
-export function generateConfigs(worldDesign, worldDir) {
+export function generateConfigs(worldDesign, worldDir, options = {}) {
   const normalizedDesign = normalizeWorldDesign(worldDesign);
+  const originalPrompt =
+    typeof options.originalPrompt === "string" && options.originalPrompt.trim()
+      ? options.originalPrompt.trim()
+      : undefined;
   const mapDir = join(worldDir, "map");
   const configDir = join(worldDir, "config");
   mkdirSync(configDir, { recursive: true });
@@ -52,6 +56,7 @@ export function generateConfigs(worldDesign, worldDir) {
     worldDescription: normalizedDesign.worldDescription,
     worldSocialContext: normalizedDesign.worldSocialContext || normalizedDesign.worldDescription,
     contentLanguage: normalizedDesign.contentLanguage || undefined,
+    originalPrompt,
     scene: {
       sceneType: normalizedDesign.sceneType,
       startTime: normalizedDesign.timeConfig.startTime,
@@ -69,6 +74,7 @@ export function generateConfigs(worldDesign, worldDir) {
       worldName: normalizedDesign.worldName,
       worldDescription: normalizedDesign.worldDescription,
       worldSocialContext: normalizedDesign.worldSocialContext || normalizedDesign.worldDescription,
+      originalPrompt,
       sceneType: normalizedDesign.sceneType,
       timeConfig: normalizedDesign.timeConfig,
       multiDay: normalizedDesign.multiDay,

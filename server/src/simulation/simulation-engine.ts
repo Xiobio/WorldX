@@ -717,47 +717,10 @@ export class SimulationEngine {
   ): Promise<SimulationEvent[]> {
     const events: SimulationEvent[] = [];
     let workingSession = { ...session, turnsThisTick: 0 };
-
-    if (!this.isSessionContinuable(workingSession)) {
-      workingSession.endReason =
-        workingSession.endReason ?? "双方已不再处于可继续对话状态";
-      const finalDialogue = await this.dialogueGenerator.finalizeDialogueSession({
-        session: workingSession,
-        gameTime,
-      });
-      events.push(
-        this.dialogueCompleteToEvent(workingSession, finalDialogue, gameTime),
-      );
-      this.finishDialogueSession(workingSession, absNow);
-      return events;
-    }
-
-    while (workingSession.turnsThisTick < MAX_DIALOGUE_TURNS_PER_TICK) {
-      const generated = await this.dialogueGenerator.generateNextTurn({
-        session: workingSession,
-        gameTime,
-      });
-      const turnIndexStart = workingSession.transcript.length;
-
-      workingSession.transcript = [...workingSession.transcript, generated.turn];
-      workingSession.turnsThisTick += 1;
-      workingSession.totalTurns += 1;
-      workingSession.lastUpdatedAt = gameTime;
-      workingSession.tags = Array.from(
-        new Set([...workingSession.tags, ...generated.tags]),
-      );
-
-      events.push(
-        this.dialogueTurnToEvent(
-          workingSession,
-          generated.turn,
-          turnIndexStart,
-          gameTime,
-        ),
-      );
-
-      if (!generated.shouldContinue) {
-        workingSession.endReason = generated.endReason ?? "自然结束";
+    try {
+      if (!this.isSessionContinuable(workingSession)) {
+        workingSession.endReason =
+          workingSession.endReason ?? "双方已不再处于可继续对话状态";
         const finalDialogue = await this.dialogueGenerator.finalizeDialogueSession({
           session: workingSession,
           gameTime,
@@ -769,18 +732,82 @@ export class SimulationEngine {
         return events;
       }
 
-      const [charA, charB] = workingSession.participants;
-      workingSession.nextSpeaker =
-        generated.suggestedNextSpeaker &&
-        workingSession.participants.includes(generated.suggestedNextSpeaker)
-          ? generated.suggestedNextSpeaker
-          : generated.turn.speaker === charA
-            ? charB
-            : charA;
-    }
+      while (workingSession.turnsThisTick < MAX_DIALOGUE_TURNS_PER_TICK) {
+        const generated = await this.dialogueGenerator.generateNextTurn({
+          session: workingSession,
+          gameTime,
+        });
+        const turnIndexStart = workingSession.transcript.length;
 
-    this.worldManager.saveDialogueSession(workingSession);
-    return events;
+        workingSession.transcript = [...workingSession.transcript, generated.turn];
+        workingSession.turnsThisTick += 1;
+        workingSession.totalTurns += 1;
+        workingSession.lastUpdatedAt = gameTime;
+        workingSession.tags = Array.from(
+          new Set([...workingSession.tags, ...generated.tags]),
+        );
+
+        events.push(
+          this.dialogueTurnToEvent(
+            workingSession,
+            generated.turn,
+            turnIndexStart,
+            gameTime,
+          ),
+        );
+
+        if (!generated.shouldContinue) {
+          workingSession.endReason = generated.endReason ?? "自然结束";
+          const finalDialogue = await this.dialogueGenerator.finalizeDialogueSession({
+            session: workingSession,
+            gameTime,
+          });
+          events.push(
+            this.dialogueCompleteToEvent(workingSession, finalDialogue, gameTime),
+          );
+          this.finishDialogueSession(workingSession, absNow);
+          return events;
+        }
+
+        const [charA, charB] = workingSession.participants;
+        workingSession.nextSpeaker =
+          generated.suggestedNextSpeaker &&
+          workingSession.participants.includes(generated.suggestedNextSpeaker)
+            ? generated.suggestedNextSpeaker
+            : generated.turn.speaker === charA
+              ? charB
+              : charA;
+      }
+
+      this.worldManager.saveDialogueSession(workingSession);
+      return events;
+    } catch (error) {
+      console.warn(
+        `[SimEngine] Aborting broken dialogue session ${workingSession.id}:`,
+        error,
+      );
+      this.cleanupBrokenDialogueSession(workingSession);
+      return events;
+    }
+  }
+
+  private cleanupBrokenDialogueSession(session: DialogueSession): void {
+    this.worldManager.deleteDialogueSession(session.id);
+    for (const charId of session.participants) {
+      try {
+        const state = this.characterManager.getState(charId);
+        if (state.currentAction !== "in_conversation") continue;
+        this.characterManager.updateState(charId, {
+          currentAction: null,
+          currentActionTarget: null,
+          actionStartTick: 0,
+          actionEndTick: 0,
+        });
+      } catch {
+        // Best-effort cleanup only. If state is already missing, dropping the
+        // stale dialogue session prevents repeated runtime failures.
+      }
+    }
   }
 
   private finishDialogueSession(session: DialogueSession, absNow: number): void {

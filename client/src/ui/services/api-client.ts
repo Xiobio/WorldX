@@ -64,6 +64,7 @@ function patchJSON<T>(path: string, body?: unknown): Promise<T> {
 export interface WorldInfo {
   worldName: string;
   worldDescription: string;
+  originalPrompt?: string;
   currentWorldId?: string | null;
   currentTimelineId?: string | null;
   sceneConfig: SceneConfigInfo;
@@ -262,7 +263,7 @@ export const apiClient = {
   }): Promise<{
     ok: boolean;
     sessionId: string;
-    character: { id: string; name: string; mbtiType: string };
+    character: { id: string; name: string; role: string };
   }> {
     return postJSON("/sandbox/chat/start", params);
   },

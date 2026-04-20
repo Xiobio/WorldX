@@ -105,6 +105,7 @@ export interface WorldConfig {
   worldDescription?: string;
   worldSocialContext?: string;
   contentLanguage?: "zh" | "en";
+  originalPrompt?: string;
   scene?: SceneConfig;
   worldActions?: WorldActionConfig[];
   locations: LocationConfig[];

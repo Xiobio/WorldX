@@ -108,7 +108,7 @@ export function TimelineManagerModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div style={bodyStyle}>
+        <div className="custom-scrollbar" style={bodyStyle}>
           {loading ? (
             <div style={{ textAlign: "center", padding: 20, opacity: 0.6 }}>{t("manager.loading")}</div>
           ) : groups.length === 0 ? (
@@ -127,11 +127,11 @@ export function TimelineManagerModal({ onClose }: { onClose: () => void }) {
                     <span style={{ fontSize: 12, opacity: 0.5, marginRight: 4 }}>
                       {isExpanded ? "▾" : "▸"}
                     </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, color: "#e8ecff" }}>
+                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: "#e8ecff", lineHeight: 1.3 }}>
                         {group.worldName}
                       </div>
-                      <div style={{ fontSize: 11, color: "#7c87ad" }}>
+                      <div style={{ fontSize: 11, color: "#7c87ad", lineHeight: 1.3 }}>
                         {group.worldId} · {t("manager.timelineCount", { count: group.timelines.length })}
                       </div>
                     </div>
@@ -166,11 +166,11 @@ export function TimelineManagerModal({ onClose }: { onClose: () => void }) {
                           const isActiveTl = tl.id === currentTimelineId;
                           return (
                             <div key={tl.id} style={timelineRowStyle}>
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 12, fontWeight: 500, color: "#d0d6ef" }}>
+                              <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 4 }}>
+                                <div style={{ fontSize: 12, fontWeight: 500, color: "#d0d6ef", lineHeight: 1.3 }}>
                                   {tl.id}
                                 </div>
-                                <div style={{ fontSize: 11, color: "#7c87ad", display: "flex", gap: 8 }}>
+                                <div style={{ fontSize: 11, color: "#7c87ad", display: "flex", gap: 8, lineHeight: 1.3 }}>
                                   <span>{formatDate(tl.createdAt)}</span>
                                   <span>{t("manager.dayTicks", { day: tl.lastGameTime.day, ticks: tl.tickCount })}</span>
                                   <span style={{
@@ -251,8 +251,14 @@ const closeBtnStyle: CSSProperties = {
 };
 
 const bodyStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0,
   padding: "12px 12px 16px",
   overflowY: "auto",
+  overflowX: "hidden",
+  scrollbarWidth: "thin",
+  scrollbarColor: "rgba(255,255,255,0.22) transparent",
+  scrollbarGutter: "stable",
   display: "flex",
   flexDirection: "column",
   gap: 8,
@@ -263,6 +269,7 @@ const worldGroupStyle: CSSProperties = {
   borderRadius: 10,
   border: "1px solid rgba(255,255,255,0.06)",
   overflow: "hidden",
+  flexShrink: 0,
 };
 
 const worldRowStyle: CSSProperties = {

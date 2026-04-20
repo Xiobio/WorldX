@@ -1,6 +1,6 @@
 import { generateImage } from "../models/gemini-flash-img.mjs";
 import { geminiProVisionJSON } from "../models/gemini-pro.mjs";
-import { arkChat } from "../models/ark-client.mjs";
+import { chat } from "../models/llm-client.mjs";
 import { loadPrompt } from "../utils/prompt-loader.mjs";
 import { resizeImage } from "../utils/image-utils.mjs";
 import { getMapImageSizeLabel } from "../utils/generation-config.mjs";
@@ -89,7 +89,7 @@ export async function generateMap(userPrompt, worldDesign, save) {
 
     if (attempt < totalAttempts && review.promptAdjustments?.length) {
       const adjustmentRequest = `以下是对地图生成prompt的审查反馈，请将这些调整建议整合成额外的约束条件（用中文，简洁明了）：\n${review.promptAdjustments.join("\n")}`;
-      const newConstraints = await arkChat([
+      const newConstraints = await chat([
         { role: "user", content: adjustmentRequest },
       ], { logStep: "Step 1 adjust", requestTimeoutMs: ADJUST_TIMEOUT_MS });
       additionalConstraints += `\n${newConstraints}`;

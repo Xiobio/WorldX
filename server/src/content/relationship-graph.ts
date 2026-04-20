@@ -5,7 +5,7 @@ export interface RelationshipGraphData {
   nodes: {
     id: string;
     name: string;
-    mbti: string;
+    role: string;
     emotion: string;
   }[];
   edges: {
@@ -41,7 +41,7 @@ export function generateGraphSnapshot(
     return {
       id: p.id,
       name: p.name,
-      mbti: p.mbtiType,
+      role: p.role,
       emotion: `${state.emotionValence.toFixed(1)}/${state.emotionArousal.toFixed(1)}`,
     };
   });

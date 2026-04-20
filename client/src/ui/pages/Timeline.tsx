@@ -85,7 +85,7 @@ export function Timeline() {
           <option value="">{t("timeline.allCharacters")}</option>
           {characters.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.name} ({c.mbti})
+              {c.name} ({c.role})
             </option>
           ))}
         </select>

@@ -138,7 +138,7 @@ export class RelationshipManager {
     return rels
       .map((r) => {
         const profile = this.profiles.get(r.targetId);
-        const name = profile ? `${profile.name}(${profile.mbtiType})` : r.targetId;
+        const name = profile ? `${profile.name}(${profile.role})` : r.targetId;
 
         const parts: string[] = [];
 

@@ -139,7 +139,7 @@ export function SidePanel({
                   setOpen(true);
                 }}
                 style={{
-                  padding: "6px 8px",
+                  padding: "7px 10px",
                   borderRadius: 6,
                   cursor: "pointer",
                   background:
@@ -152,12 +152,13 @@ export function SidePanel({
                   alignItems: "center",
                   gap: 8,
                   marginBottom: 2,
-                  transition: "background 0.15s",
+                  transition: "background 0.15s, border-color 0.15s",
+                  border: c.id === selectedCharId ? "1px solid rgba(255,255,255,0.15)" : "1px solid transparent"
                 }}
               >
-                <span style={{ opacity: 0.7 }}>{c.mbti}</span>
-                <span style={{ fontWeight: 500 }}>{c.name}</span>
-                <span style={{ marginLeft: "auto", opacity: 0.5 }}>
+                <span style={{ fontWeight: 600, fontSize: 13, color: "#fff", whiteSpace: "nowrap", flexShrink: 0 }}>{c.name}</span>
+                <span style={{ opacity: 0.45, fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", minWidth: 0 }} title={c.role}>{c.role}</span>
+                <span style={{ marginLeft: "auto", opacity: 0.55, fontSize: 11, whiteSpace: "nowrap", flexShrink: 0 }}>
                   {c.currentActionLabel || formatActionName(c.currentAction || "idle")}
                 </span>
               </div>

@@ -90,6 +90,7 @@ export interface DialogueEventData {
 export interface Perception {
   currentLocation: string;
   locationDescription: string;
+  myZone?: string;
   objectsHere: {
     id: string;
     name: string;
@@ -105,6 +106,7 @@ export interface Perception {
     appearanceHint?: string;
     locationId?: string;
     locationName?: string;
+    zone?: string;
   }[];
   recentEnvironmentChanges: string[];
   recentActions: string[];

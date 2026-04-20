@@ -6,7 +6,7 @@ import { CharacterMovement } from "../systems/CharacterMovement";
 import { PlaybackController } from "../systems/PlaybackController";
 import { CameraController } from "../systems/CameraController";
 import { CharacterSprite } from "../objects/CharacterSprite";
-import { MBTI_COLORS, getCharacterColor, actionToEmoji, createCharacterDisplayMetrics } from "../config/game-config";
+import { getCharacterColor, actionToEmoji, createCharacterDisplayMetrics } from "../config/game-config";
 import { apiClient } from "../ui/services/api-client";
 import type { CharacterInfo, DialogueEventData, SimulationEvent } from "../types/api";
 
@@ -43,6 +43,10 @@ export class WorldScene extends Phaser.Scene {
   private regionBoundsOverlay: Phaser.GameObjects.Container | null = null;
   private mainAreaPointsOverlay: Phaser.GameObjects.Graphics | null = null;
   private interactiveObjectsOverlay: Phaser.GameObjects.Container | null = null;
+  private interactiveHoverGraphics: Phaser.GameObjects.Graphics | null = null;
+  private interactiveHoverLabelContainer: Phaser.GameObjects.Container | null = null;
+  private interactiveHoverLabelText: Phaser.GameObjects.Text | null = null;
+  private interactiveHoverLabelBg: Phaser.GameObjects.Graphics | null = null;
   private lastObservedDay: number | null = null;
   private isReplaying = false;
   private tickPlaybackActive = false;
@@ -87,6 +91,7 @@ export class WorldScene extends Phaser.Scene {
     this.entityLayer.setDepth(10);
     this.mapPixelWidth = bgWidth;
     this.mapPixelHeight = bgHeight;
+    this.setupInteractiveObjectHover();
 
     this.pathfinder = new PathfindingManager(this.mapManager);
 
@@ -236,7 +241,7 @@ export class WorldScene extends Phaser.Scene {
       const charInfo: CharacterInfo = {
         id: char.id,
         name: char.name,
-        mbti: "",
+        role: "",
         nickname: "",
         location: char.location,
         mainAreaPointId: char.mainAreaPointId,
@@ -253,7 +258,6 @@ export class WorldScene extends Phaser.Scene {
         sprite = new CharacterSprite(this, pos.x, pos.y, {
           characterId: char.id,
           name: char.name,
-          mbti: "",
           color,
           displayMetrics,
         });
@@ -285,13 +289,10 @@ export class WorldScene extends Phaser.Scene {
       let sprite = this.characterSprites.get(char.id);
 
       if (!sprite) {
-        const color = char.mbti
-          ? (MBTI_COLORS[char.mbti] || getCharacterColor(index))
-          : getCharacterColor(index);
+        const color = getCharacterColor(index);
         sprite = new CharacterSprite(this, pos.x, pos.y, {
           characterId: char.id,
           name: char.name,
-          mbti: char.mbti || "",
           color,
           displayMetrics,
         });
@@ -341,6 +342,7 @@ export class WorldScene extends Phaser.Scene {
     sprite.profileAnchor = char.anchor || null;
     sprite.setCurrentAction(char.currentAction);
     sprite.setActionIcon(actionToEmoji(char.currentAction));
+    sprite.setActionLabel(char.currentActionLabel || null);
     sprite.setMovementAnchor({
       x: pos.x,
       y: pos.y,
@@ -380,6 +382,7 @@ export class WorldScene extends Phaser.Scene {
           const sprite = this.characterSprites.get(event.actorId);
           sprite?.setCurrentAction(null);
           sprite?.setActionIcon("");
+          sprite?.setActionLabel(null);
           const pointId =
             typeof event.data?.toPointId === "string" ? event.data.toPointId : null;
           void this.trackPlaybackAsync(
@@ -399,6 +402,12 @@ export class WorldScene extends Phaser.Scene {
         if (sprite) {
           sprite.setCurrentAction(actionId);
           sprite.setActionIcon(actionToEmoji(actionId));
+          const actionType = event.data?.actionType;
+          if (actionType === "interact_object") {
+            sprite.setActionLabel(event.data?.interactionName || actionToEmoji(actionId) || null);
+          } else {
+            sprite.setActionLabel(null);
+          }
         }
         const objectId = event.data?.objectId ?? event.targetId;
         if (objectId && event.actorId && event.data?.actionType === "interact_object") {
@@ -415,6 +424,7 @@ export class WorldScene extends Phaser.Scene {
         if (sprite) {
           sprite.setCurrentAction(null);
           sprite.setActionIcon("");
+          sprite.setActionLabel(null);
         }
         break;
       }
@@ -500,6 +510,7 @@ export class WorldScene extends Phaser.Scene {
       if (!sprite) continue;
       sprite.setCurrentAction(action);
       sprite.setActionIcon(actionToEmoji(action));
+      sprite.setActionLabel(null);
     }
   }
 
@@ -749,6 +760,87 @@ export class WorldScene extends Phaser.Scene {
     }
 
     return pointMarkers;
+  }
+
+  private setupInteractiveObjectHover() {
+    this.interactiveHoverGraphics = this.add.graphics();
+    this.interactiveHoverGraphics.setDepth(15);
+    
+    this.interactiveHoverLabelContainer = this.add.container(0, 0);
+    this.interactiveHoverLabelContainer.setDepth(16);
+    this.interactiveHoverLabelContainer.setVisible(false);
+
+    this.interactiveHoverLabelBg = this.add.graphics();
+    this.interactiveHoverLabelText = this.add.text(0, 0, "", {
+      fontSize: "18px",
+      fontFamily: "'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif",
+      color: "#ffffff",
+      stroke: "#000000",
+      strokeThickness: 2,
+    });
+    
+    this.interactiveHoverLabelContainer.add([this.interactiveHoverLabelBg, this.interactiveHoverLabelText]);
+
+    let currentHoveredObjectId: string | null = null;
+
+    for (const object of this.mapManager.getInteractiveObjects()) {
+      const zone = this.add.zone(object.x, object.y, object.width, object.height);
+      zone.setOrigin(0, 0);
+      zone.setInteractive();
+      
+      zone.on("pointerover", () => {
+        if (!this.interactiveHoverGraphics || !this.interactiveHoverLabelContainer || !this.interactiveHoverLabelBg || !this.interactiveHoverLabelText) return;
+        
+        currentHoveredObjectId = object.objectId;
+
+        // Draw highlight
+        this.interactiveHoverGraphics.clear();
+        this.interactiveHoverGraphics.lineStyle(2, 0xffffff, 0.8);
+        this.interactiveHoverGraphics.fillStyle(0xffffff, 0.15);
+        
+        // Use a rounded rectangle for a slightly softer look
+        this.interactiveHoverGraphics.fillRoundedRect(object.x, object.y, object.width, object.height, 4);
+        this.interactiveHoverGraphics.strokeRoundedRect(object.x, object.y, object.width, object.height, 4);
+        
+        // Show label
+        this.interactiveHoverLabelText.setText(object.name || object.objectId);
+        
+        // Measure text bounds to draw a nice rounded background
+        const textWidth = this.interactiveHoverLabelText.width;
+        const textHeight = this.interactiveHoverLabelText.height;
+        const bgPaddingX = 12;
+        const bgPaddingY = 8;
+        
+        this.interactiveHoverLabelBg.clear();
+        this.interactiveHoverLabelBg.fillStyle(0x000000, 0.75);
+        this.interactiveHoverLabelBg.fillRoundedRect(
+          -bgPaddingX, 
+          -bgPaddingY, 
+          textWidth + bgPaddingX * 2, 
+          textHeight + bgPaddingY * 2, 
+          6 // border radius
+        );
+        
+        // Position text inside container
+        this.interactiveHoverLabelText.setPosition(0, 0);
+        
+        // Position the whole container
+        const containerX = object.x + object.width / 2 - textWidth / 2;
+        const containerY = Math.max(10 + bgPaddingY, object.y - textHeight - bgPaddingY - 4);
+        
+        this.interactiveHoverLabelContainer.setPosition(containerX, containerY);
+        this.interactiveHoverLabelContainer.setVisible(true);
+      });
+      
+      zone.on("pointerout", () => {
+        if (currentHoveredObjectId === object.objectId) {
+          if (!this.interactiveHoverGraphics || !this.interactiveHoverLabelContainer) return;
+          this.interactiveHoverGraphics.clear();
+          this.interactiveHoverLabelContainer.setVisible(false);
+          currentHoveredObjectId = null;
+        }
+      });
+    }
   }
 
   private buildInteractiveObjectsOverlay(): Phaser.GameObjects.Container {

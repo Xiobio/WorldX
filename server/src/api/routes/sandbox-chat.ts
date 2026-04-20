@@ -85,7 +85,7 @@ router.post("/start", (req: Request, res: Response) => {
     character: {
       id: profile.id,
       name: profile.name,
-      mbtiType: profile.mbtiType,
+      role: profile.role,
     },
   });
 });

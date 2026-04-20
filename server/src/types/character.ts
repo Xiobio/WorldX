@@ -11,7 +11,7 @@ export type MemoryType =
 export interface CharacterProfile {
   id: string;
   name: string;
-  mbtiType: string;
+  role: string;
   nickname: string;
   startPosition: string;
   backstory?: string;

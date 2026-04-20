@@ -32,6 +32,7 @@ router.get("/info", (_req, res) => {
   res.json({
     worldName: wm.getWorldName(),
     worldDescription: wm.getWorldDescription(),
+    originalPrompt: wm.getOriginalPrompt(),
     currentWorldId: currentWorldDir ? path.basename(currentWorldDir) : null,
     currentTimelineId: appContext.timelineManager.getCurrentTimelineId(),
     sceneConfig: wm.getSceneConfig(),

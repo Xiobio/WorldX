@@ -35,10 +35,13 @@ export interface TickAdvanceResult {
   cycleTicks: number;
 }
 
+export type MainAreaZone = "东" | "南" | "西" | "北" | "中";
+
 export class WorldManager {
   private locationConfigs: LocationConfig[] = [];
   private mainAreaPoints: MainAreaPointConfig[] = [];
   private preferredMainAreaPointIds: Set<string> | null = null;
+  private mainAreaZoneMap: Map<string, MainAreaZone> = new Map();
   private worldActions: WorldActionConfig[] = [];
   private worldSize: WorldSizeConfig | null = null;
   private sceneConfig!: SceneConfig;
@@ -46,6 +49,7 @@ export class WorldManager {
   private worldDescription = "";
   private worldSocialContext = "";
   private contentLanguage: "zh" | "en" = "zh";
+  private originalPrompt = "";
 
   constructor() {}
 
@@ -61,6 +65,7 @@ export class WorldManager {
     );
     this.mainAreaPoints = normalizeMainAreaPoints(config.mainAreaPoints);
     this.preferredMainAreaPointIds = getLargestMainAreaPointComponent(this.mainAreaPoints);
+    this.mainAreaZoneMap = computeMainAreaZones(this.mainAreaPoints);
     this.worldSize = normalizeWorldSize(config.worldSize) ?? inferWorldSizeFromWorldDir();
     this.worldActions = config.worldActions ?? [];
     this.worldName = config.worldName ?? "unknown";
@@ -70,6 +75,7 @@ export class WorldManager {
       this.worldDescription,
     );
     this.contentLanguage = config.contentLanguage ?? "zh";
+    this.originalPrompt = config.originalPrompt ?? "";
     this.sceneConfig = loadSceneConfig();
 
     worldState.initWorldState(this.locationConfigs);
@@ -83,6 +89,10 @@ export class WorldManager {
 
   getWorldDescription(): string {
     return this.worldDescription;
+  }
+
+  getOriginalPrompt(): string {
+    return this.originalPrompt;
   }
 
   getWorldSocialContext(): string {
@@ -199,6 +209,26 @@ export class WorldManager {
 
   hasMultipleMainAreaPoints(): boolean {
     return this.mainAreaPoints.length > 1;
+  }
+
+  getMainAreaPointZone(pointId: string | null | undefined): MainAreaZone {
+    if (!pointId) return "中";
+    return this.mainAreaZoneMap.get(pointId) ?? "中";
+  }
+
+  getAvailableMainAreaZones(): MainAreaZone[] {
+    if (this.mainAreaZoneMap.size === 0) return [];
+    return [...new Set(this.mainAreaZoneMap.values())];
+  }
+
+  pickPointInZone(zone: MainAreaZone, seed: string, excludePointId?: string | null): string | null {
+    const preferred = this.getPreferredSpawnMainAreaPoints();
+    const candidates = preferred.filter(
+      (p) => this.mainAreaZoneMap.get(p.id) === zone && p.id !== excludePointId,
+    );
+    if (candidates.length === 0) return null;
+    const index = Math.abs(hashString(seed)) % candidates.length;
+    return candidates[index].id;
   }
 
   areMainAreaPointsConversable(pointA: string | null | undefined, pointB: string | null | undefined): boolean {
@@ -779,4 +809,48 @@ function buildWorldSocialContext(
   const trimmedDescription = typeof worldDescription === "string" ? worldDescription.trim() : "";
   if (trimmedDescription) return trimmedDescription;
   return "这是一个有自身日常秩序的小世界。让背景只作为处事底色，别机械复述设定。";
+}
+
+const MIN_POINTS_FOR_ZONES = 5;
+
+function computeMainAreaZones(points: MainAreaPointConfig[]): Map<string, MainAreaZone> {
+  const zoneMap = new Map<string, MainAreaZone>();
+  if (points.length === 0) return zoneMap;
+  if (points.length < MIN_POINTS_FOR_ZONES) {
+    for (const p of points) zoneMap.set(p.id, "中");
+    return zoneMap;
+  }
+
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  for (const p of points) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  const rangeX = maxX - minX;
+  const rangeY = maxY - minY;
+  if (rangeX < 1 && rangeY < 1) {
+    for (const p of points) zoneMap.set(p.id, "中");
+    return zoneMap;
+  }
+
+  for (const p of points) {
+    const nx = rangeX > 0 ? (p.x - minX) / rangeX : 0.5;
+    const ny = rangeY > 0 ? (p.y - minY) / rangeY : 0.5;
+    const inCenterX = nx >= 0.3 && nx <= 0.7;
+    const inCenterY = ny >= 0.3 && ny <= 0.7;
+    if (inCenterX && inCenterY) {
+      zoneMap.set(p.id, "中");
+    } else {
+      const devX = Math.abs(nx - 0.5);
+      const devY = Math.abs(ny - 0.5);
+      if (devX >= devY) {
+        zoneMap.set(p.id, nx < 0.5 ? "西" : "东");
+      } else {
+        zoneMap.set(p.id, ny < 0.5 ? "北" : "南");
+      }
+    }
+  }
+  return zoneMap;
 }

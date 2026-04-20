@@ -1,12 +1,15 @@
 /**
- * Gemini 3.1 Pro (vision + text) via OpenRouter.
- * Used for image analysis, element detection, and self-feedback review.
+ * Vision review client — OpenAI-compatible chat completions with multimodal input.
+ * Reads VISION_* env vars. Default: OpenRouter + gemini-3.1-pro-preview.
  */
 
 import { logModelCall, logModelResponse, logError } from "../utils/logger.mjs";
 
-const MODEL = "google/gemini-3.1-pro-preview";
-const DEFAULT_REQUEST_TIMEOUT_MS = parseInt(process.env.GEMINI_REQUEST_TIMEOUT_MS || "180000", 10);
+const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
+const DEFAULT_MODEL = "google/gemini-3.1-pro-preview";
+const MODEL = process.env.VISION_MODEL || DEFAULT_MODEL;
+const BASE_URL = process.env.VISION_BASE_URL || DEFAULT_BASE_URL;
+const DEFAULT_REQUEST_TIMEOUT_MS = parseInt(process.env.VISION_TIMEOUT_MS || "180000", 10);
 const MAX_CONSECUTIVE_FAILURES = 2;
 
 async function withRetry(fn, logStep) {
@@ -43,7 +46,7 @@ function resolveRequestTimeoutMs(requestTimeoutMs, timeoutEnvKey) {
  */
 export async function geminiProChat(prompt, { temperature = 0.3, logStep = "gemini-pro", requestTimeoutMs, timeoutEnvKey } = {}) {
   return withRetry(async () => {
-    const API_KEY = process.env.OPENROUTER_API_KEY || "";
+    const API_KEY = process.env.VISION_API_KEY || "";
     logModelCall(logStep, MODEL, prompt);
     const timeoutMs = resolveRequestTimeoutMs(requestTimeoutMs, timeoutEnvKey);
 
@@ -51,7 +54,7 @@ export async function geminiProChat(prompt, { temperature = 0.3, logStep = "gemi
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch(`${BASE_URL}/chat/completions`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${API_KEY}`,
@@ -67,7 +70,7 @@ export async function geminiProChat(prompt, { temperature = 0.3, logStep = "gemi
 
       if (!res.ok) {
         const err = await res.text();
-        const error = new Error(`Gemini Pro API error ${res.status}: ${err}`);
+        const error = new Error(`Vision API error ${res.status}: ${err}`);
         logError(logStep, error);
         throw error;
       }
@@ -78,7 +81,7 @@ export async function geminiProChat(prompt, { temperature = 0.3, logStep = "gemi
       return text;
     } catch (e) {
       if (e.name === "AbortError") {
-        const error = new Error(`Gemini Pro request timed out after ${timeoutMs / 1000}s`);
+        const error = new Error(`Vision request timed out after ${timeoutMs / 1000}s`);
         logError(logStep, error);
         throw error;
       }
@@ -96,7 +99,7 @@ export async function geminiProChat(prompt, { temperature = 0.3, logStep = "gemi
  */
 export async function geminiProVision(text, imageBuffers, { temperature = 0.3, logStep = "gemini-pro-vision", requestTimeoutMs, timeoutEnvKey } = {}) {
   return withRetry(async () => {
-    const API_KEY = process.env.OPENROUTER_API_KEY || "";
+    const API_KEY = process.env.VISION_API_KEY || "";
     const imageRefs = imageBuffers.map((buf, i) => `[image_${i} ${(buf.length / 1024).toFixed(0)}KB]`);
     logModelCall(logStep, MODEL, text, imageRefs);
     const timeoutMs = resolveRequestTimeoutMs(requestTimeoutMs, timeoutEnvKey);
@@ -113,7 +116,7 @@ export async function geminiProVision(text, imageBuffers, { temperature = 0.3, l
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch(`${BASE_URL}/chat/completions`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${API_KEY}`,
@@ -129,7 +132,7 @@ export async function geminiProVision(text, imageBuffers, { temperature = 0.3, l
 
       if (!res.ok) {
         const err = await res.text();
-        const error = new Error(`Gemini Pro Vision API error ${res.status}: ${err}`);
+        const error = new Error(`Vision API error ${res.status}: ${err}`);
         logError(logStep, error);
         throw error;
       }
@@ -140,7 +143,7 @@ export async function geminiProVision(text, imageBuffers, { temperature = 0.3, l
       return result;
     } catch (e) {
       if (e.name === "AbortError") {
-        const error = new Error(`Gemini Pro Vision request timed out after ${timeoutMs / 1000}s`);
+        const error = new Error(`Vision request timed out after ${timeoutMs / 1000}s`);
         logError(logStep, error);
         throw error;
       }
@@ -157,12 +160,12 @@ export async function geminiProVision(text, imageBuffers, { temperature = 0.3, l
 export async function geminiProVisionJSON(text, imageBuffers, opts = {}) {
   const raw = await geminiProVision(text, imageBuffers, opts);
   if (!raw || !raw.trim()) {
-    throw new Error("Empty Gemini Pro JSON response");
+    throw new Error("Empty Vision JSON response");
   }
   try {
     const match = raw.match(/\{[\s\S]*\}/);
     return match ? JSON.parse(match[0]) : JSON.parse(raw);
   } catch {
-    throw new Error(`Failed to parse Gemini Pro JSON: ${raw.slice(0, 500)}`);
+    throw new Error(`Failed to parse Vision JSON: ${raw.slice(0, 500)}`);
   }
 }

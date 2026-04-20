@@ -10,6 +10,7 @@ import { SidePanel } from "./panels/SidePanel";
 import { MapControls } from "./panels/MapControls";
 import { DialoguePanel } from "./panels/DialoguePanel";
 import { SceneTransition } from "./panels/SceneTransition";
+import { WorldIntroBanner } from "./panels/WorldIntroBanner";
 import { RelationshipGraph } from "./pages/RelationshipGraph";
 import { Timeline } from "./pages/Timeline";
 import { CreateWorldPage } from "./pages/CreateWorldPage";
@@ -309,6 +310,17 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   }, [eventBus]);
 
 
+  const handleToggleDevMode = useCallback(() => {
+    const params = new URLSearchParams(location.search);
+    if (isDevMode) {
+      params.delete("dev");
+    } else {
+      params.set("dev", "1");
+    }
+    const newSearch = params.toString();
+    navigate(`${location.pathname}${newSearch ? `?${newSearch}` : ""}`, { replace: true });
+  }, [isDevMode, location.pathname, location.search, navigate]);
+
   const handleToggleAutoPlay = useCallback(() => {
     eventBus.emit("set_auto_play", !autoPlayEnabled);
   }, [autoPlayEnabled, eventBus]);
@@ -388,6 +400,7 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
             worldInfo={worldInfo}
             gameTime={gameTime}
             isDevMode={isDevMode}
+            onToggleDevMode={handleToggleDevMode}
             showWalkableOverlay={showWalkableOverlay}
             showRegionBoundsOverlay={showRegionBoundsOverlay}
             showMainAreaPointsOverlay={showMainAreaPointsOverlay}
@@ -407,6 +420,14 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
             onStopReplay={handleStopReplay}
             onHeightChange={setTopBarHeight}
           />
+          {worldInfo && (worldInfo.originalPrompt?.trim() || worldInfo.worldDescription?.trim()) && (
+            <WorldIntroBanner
+              worldKey={worldInfo.currentWorldId || worldInfo.worldName}
+              worldName={worldInfo.worldName}
+              worldDescription={worldInfo.originalPrompt?.trim() || worldInfo.worldDescription}
+              topOffset={Math.max(topBarHeight, DEFAULT_TOP_BAR_HEIGHT)}
+            />
+          )}
           <SidePanel
             selectedCharId={selectedCharId}
             followedCharId={followedCharId}

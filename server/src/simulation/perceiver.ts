@@ -43,6 +43,7 @@ export function buildPerception(
           state: s,
         }))
       : characterManager.getCharactersAtLocation(state.location);
+  const hasZones = worldManager.getAvailableMainAreaZones().length > 1;
   const charactersHere = charsAtLoc
     .filter((c) => c.profile.id !== charId)
     .map((c) => {
@@ -50,6 +51,10 @@ export function buildPerception(
         Math.abs(c.state.emotionValence) >= 2 || c.state.emotionArousal >= 7;
       const targetLocation =
         worldManager.getLocation(c.state.location)?.name ?? c.state.location;
+      const zone =
+        hasZones && c.state.location === "main_area"
+          ? worldManager.getMainAreaPointZone(c.state.mainAreaPointId)
+          : undefined;
       return {
         id: c.profile.id,
         name: c.profile.name,
@@ -60,6 +65,7 @@ export function buildPerception(
         emotionLabel: visiblyEmotional
           ? getEmotionLabel(c.state.emotionValence, c.state.emotionArousal)
           : undefined,
+        zone,
       };
     });
 
@@ -89,9 +95,15 @@ export function buildPerception(
 
   const recentActions = getRecentActionDescriptions(charId, gameTime);
 
+  const myZone =
+    hasZones && state.location === "main_area"
+      ? worldManager.getMainAreaPointZone(state.mainAreaPointId)
+      : undefined;
+
   return {
     currentLocation: location.name,
     locationDescription: location.description,
+    myZone,
     objectsHere,
     charactersHere,
     recentEnvironmentChanges,

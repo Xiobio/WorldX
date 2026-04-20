@@ -114,7 +114,7 @@ export function buildActionMenu(
         ? ` [可交互：${anchorServices.join("、")}]`
         : "";
       charLines.push(
-        `${idx}. [talk_to] ${c.name}(${otherProfile.mbtiType}, ${c.id}) — ${actionStr}${serviceHint}`,
+        `${idx}. [talk_to] ${c.name}(${otherProfile.role}, ${c.id}) — ${actionStr}${serviceHint}`,
       );
       idx++;
     }
@@ -130,7 +130,7 @@ export function buildActionMenu(
       if (ancState.currentAction === "in_conversation") continue;
       const actionStr = ancState.currentAction ? `正在${ancState.currentAction}` : "空闲";
       charLines.push(
-        `${idx}. [talk_to] ${ancProfile.name}(${ancProfile.mbtiType}, ${ancCharId}) — ${actionStr} [可交互：${services.join("、")}]`,
+        `${idx}. [talk_to] ${ancProfile.name}(${ancProfile.role}, ${ancCharId}) — ${actionStr} [可交互：${services.join("、")}]`,
       );
       idx++;
     }
@@ -154,7 +154,7 @@ export function buildActionMenu(
         ? ` [可交互：${anchorServices.join("、")}]`
         : "";
       charLines.push(
-        `${idx}. [talk_to] ${c.name}(${otherProfile.mbtiType}, ${c.id}) — ${actionStr}${serviceHint}`,
+        `${idx}. [talk_to] ${c.name}(${otherProfile.role}, ${c.id}) — ${actionStr}${serviceHint}`,
       );
       idx++;
     }
@@ -169,8 +169,19 @@ export function buildActionMenu(
     const adjacent = worldManager.getAdjacentLocations(state.location);
     const moveLines: string[] = [];
     if (state.location === "main_area" && worldManager.hasMultipleMainAreaPoints()) {
-      moveLines.push(`${idx}. [move_within_main_area] 在主区域内换个地方活动(main_area)`);
-      idx++;
+      const zones = worldManager.getAvailableMainAreaZones();
+      const myZone = worldManager.getMainAreaPointZone(state.mainAreaPointId);
+      if (zones.length > 1) {
+        for (const z of zones) {
+          if (z === myZone) continue;
+          const label = z === "中" ? "中央" : `${z}侧`;
+          moveLines.push(`${idx}. [move_within_main_area] 走到主区域${label}(main_area:${z})`);
+          idx++;
+        }
+      } else {
+        moveLines.push(`${idx}. [move_within_main_area] 在主区域内换个地方活动(main_area)`);
+        idx++;
+      }
     }
     if (adjacent.length > 0) {
       for (const locId of adjacent) {

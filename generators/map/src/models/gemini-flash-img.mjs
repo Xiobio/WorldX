@@ -1,13 +1,16 @@
 /**
- * Gemini 3.1 Flash Image (Nano Banana 2) via OpenRouter.
- * Used for image generation and image editing (text+image → image).
+ * Image generation client — OpenAI-compatible chat completions with image output.
+ * Reads IMAGE_GEN_* env vars. Default: OpenRouter + gemini-3.1-flash-image-preview.
  */
 
 import { logModelCall, logModelResponse, logModelImageResponse, logError } from "../utils/logger.mjs";
 import { getMapImageSizeLabel } from "../utils/generation-config.mjs";
 
-const MODEL = "google/gemini-3.1-flash-image-preview";
-const DEFAULT_REQUEST_TIMEOUT_MS = parseInt(process.env.GEMINI_REQUEST_TIMEOUT_MS || "180000", 10);
+const DEFAULT_BASE_URL = "https://openrouter.ai/api/v1";
+const DEFAULT_MODEL = "google/gemini-3.1-flash-image-preview";
+const MODEL = process.env.IMAGE_GEN_MODEL || DEFAULT_MODEL;
+const BASE_URL = process.env.IMAGE_GEN_BASE_URL || DEFAULT_BASE_URL;
+const DEFAULT_REQUEST_TIMEOUT_MS = parseInt(process.env.IMAGE_GEN_TIMEOUT_MS || "180000", 10);
 const MAX_CONSECUTIVE_FAILURES = 2;
 
 async function withRetry(fn, logStep) {
@@ -48,7 +51,7 @@ export async function generateImage(
   { aspectRatio = "16:9", imageSize = getMapImageSizeLabel(), logStep = "flash-img-gen", requestTimeoutMs, timeoutEnvKey } = {},
 ) {
   return withRetry(async () => {
-    const API_KEY = process.env.OPENROUTER_API_KEY || "";
+    const API_KEY = process.env.IMAGE_GEN_API_KEY || "";
     logModelCall(logStep, MODEL, prompt, [`config: aspect=${aspectRatio}, size=${imageSize}`]);
     const timeoutMs = resolveRequestTimeoutMs(requestTimeoutMs, timeoutEnvKey);
 
@@ -56,7 +59,7 @@ export async function generateImage(
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch(`${BASE_URL}/chat/completions`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${API_KEY}`,
@@ -73,7 +76,7 @@ export async function generateImage(
 
       if (!res.ok) {
         const err = await res.text();
-        const error = new Error(`Flash Image API error ${res.status}: ${err}`);
+        const error = new Error(`Image Gen API error ${res.status}: ${err}`);
         logError(logStep, error);
         throw error;
       }
@@ -84,7 +87,7 @@ export async function generateImage(
       return buf;
     } catch (e) {
       if (e.name === "AbortError") {
-        const error = new Error(`Flash Image request timed out after ${timeoutMs / 1000}s`);
+        const error = new Error(`Image Gen request timed out after ${timeoutMs / 1000}s`);
         logError(logStep, error);
         throw error;
       }
@@ -103,7 +106,7 @@ export async function generateImage(
  */
 export async function editImage(text, imageBuffer, { imageSize = "2K", logStep = "flash-img-edit", requestTimeoutMs, timeoutEnvKey } = {}) {
   return withRetry(async () => {
-    const API_KEY = process.env.OPENROUTER_API_KEY || "";
+    const API_KEY = process.env.IMAGE_GEN_API_KEY || "";
     logModelCall(logStep, MODEL, text, [`input_image: ${(imageBuffer.length / 1024).toFixed(0)}KB`, `config: size=${imageSize}`]);
     const timeoutMs = resolveRequestTimeoutMs(requestTimeoutMs, timeoutEnvKey);
 
@@ -113,7 +116,7 @@ export async function editImage(text, imageBuffer, { imageSize = "2K", logStep =
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      const res = await fetch(`${BASE_URL}/chat/completions`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${API_KEY}`,
@@ -141,7 +144,7 @@ export async function editImage(text, imageBuffer, { imageSize = "2K", logStep =
 
       if (!res.ok) {
         const err = await res.text();
-        const error = new Error(`Flash Image Edit API error ${res.status}: ${err}`);
+        const error = new Error(`Image Gen Edit API error ${res.status}: ${err}`);
         logError(logStep, error);
         throw error;
       }
@@ -152,7 +155,7 @@ export async function editImage(text, imageBuffer, { imageSize = "2K", logStep =
       return buf;
     } catch (e) {
       if (e.name === "AbortError") {
-        const error = new Error(`Flash Image Edit request timed out after ${timeoutMs / 1000}s`);
+        const error = new Error(`Image Gen Edit request timed out after ${timeoutMs / 1000}s`);
         logError(logStep, error);
         throw error;
       }
@@ -165,7 +168,7 @@ export async function editImage(text, imageBuffer, { imageSize = "2K", logStep =
 
 function extractImageBuffer(data) {
   const message = data.choices?.[0]?.message;
-  if (!message) throw new Error("No message in Flash Image response");
+  if (!message) throw new Error("No message in Image Gen response");
 
   if (message.images && message.images.length > 0) {
     const url = message.images[0].image_url.url;
@@ -188,5 +191,5 @@ function extractImageBuffer(data) {
     }
   }
 
-  throw new Error("No image found in Flash Image response");
+  throw new Error("No image found in Image Gen response");
 }

@@ -82,7 +82,7 @@ export class PromptBuilder {
 
     const content = this.build("reactive-decision", {
       name: profile.name,
-      mbtiType: profile.mbtiType,
+      role: profile.role,
       coreTraits: profile.coreTraits.join("、"),
       speakingStyle: profile.speakingStyle,
       day: String(gameTime.day),
@@ -123,7 +123,7 @@ export class PromptBuilder {
 
     const content = this.build("dialogue", {
       nameA: a.profile.name,
-      mbtiA: a.profile.mbtiType,
+      roleA: a.profile.role,
       traitsA: a.profile.coreTraits.join("、"),
       styleA: a.profile.speakingStyle,
       emotionA: getEmotionLabelSimple(
@@ -138,7 +138,7 @@ export class PromptBuilder {
       motivation: params.initiatorMotivation,
 
       nameB: b.profile.name,
-      mbtiB: b.profile.mbtiType,
+      roleB: b.profile.role,
       traitsB: b.profile.coreTraits.join("、"),
       styleB: b.profile.speakingStyle,
       emotionB: getEmotionLabelSimple(
@@ -191,7 +191,7 @@ export class PromptBuilder {
     const content = this.build("dialogue-turn", {
       nameA: a.profile.name,
       idA: a.profile.id,
-      mbtiA: a.profile.mbtiType,
+      roleA: a.profile.role,
       traitsA: a.profile.coreTraits.join("、"),
       styleA: a.profile.speakingStyle,
       emotionA: getEmotionLabelSimple(
@@ -208,7 +208,7 @@ export class PromptBuilder {
 
       nameB: b.profile.name,
       idB: b.profile.id,
-      mbtiB: b.profile.mbtiType,
+      roleB: b.profile.role,
       traitsB: b.profile.coreTraits.join("、"),
       styleB: b.profile.speakingStyle,
       emotionB: getEmotionLabelSimple(
@@ -292,7 +292,7 @@ export class PromptBuilder {
 
     const content = this.build("diary", {
       name: profile.name,
-      mbtiType: profile.mbtiType,
+      role: profile.role,
       coreTraits: profile.coreTraits.join("、"),
       speakingStyle: profile.speakingStyle,
       day: String(gameDay),
@@ -348,7 +348,7 @@ export class PromptBuilder {
 
     const content = this.build("sandbox-chat", {
       name: profile.name,
-      mbtiType: profile.mbtiType,
+      role: profile.role,
       coreTraits: profile.coreTraits.join("、"),
       speakingStyle: profile.speakingStyle,
       coreMotivation: profile.coreMotivation,
@@ -374,7 +374,7 @@ export class PromptBuilder {
 
     const content = this.build("micro-reflection", {
       name: profile.name,
-      mbtiType: profile.mbtiType,
+      role: profile.role,
       coreTraits: profile.coreTraits.join("、"),
       day: String(gameDay),
       timeString: params.timeString || "此刻",
@@ -395,7 +395,7 @@ export class PromptBuilder {
 
     const content = this.build("reflection", {
       name: profile.name,
-      mbtiType: profile.mbtiType,
+      role: profile.role,
       coreTraits: profile.coreTraits.join("、"),
       day: String(gameDay),
       recentMemories: params.recentMemories || "（今天没什么特别的事）",
@@ -424,7 +424,8 @@ function getEmotionLabelSimple(valence: number, arousal: number): string {
 
 function formatPerception(p: Perception): string {
   const lines: string[] = [];
-  lines.push(`位置：${p.currentLocation}（${p.locationDescription}）`);
+  const zoneSuffix = p.myZone ? `，你在${zoneLabel(p.myZone)}` : "";
+  lines.push(`位置：${p.currentLocation}（${p.locationDescription}）${zoneSuffix}`);
 
   if (p.objectsHere.length > 0) {
     lines.push("可见物件：");
@@ -443,7 +444,9 @@ function formatPerception(p: Perception): string {
     lines.push("能看到的人：");
     for (const c of p.charactersHere) {
       const detailParts: string[] = [];
-      if (c.locationName && c.locationName !== p.currentLocation) {
+      if (c.zone) {
+        detailParts.push(`在${zoneLabel(c.zone)}`);
+      } else if (c.locationName && c.locationName !== p.currentLocation) {
         detailParts.push(`在${c.locationName}`);
       }
       if (c.currentAction) {
@@ -468,6 +471,10 @@ function formatPerception(p: Perception): string {
   }
 
   return lines.join("\n");
+}
+
+function zoneLabel(zone: string): string {
+  return zone === "中" ? "中央" : `${zone}侧`;
 }
 
 function formatTranscript(turns: { speaker: string; content: string }[]): string {

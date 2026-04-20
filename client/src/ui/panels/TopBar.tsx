@@ -18,6 +18,7 @@ export function TopBar({
   worldInfo,
   gameTime,
   isDevMode,
+  onToggleDevMode,
   showWalkableOverlay,
   showRegionBoundsOverlay,
   showMainAreaPointsOverlay,
@@ -40,6 +41,7 @@ export function TopBar({
   worldInfo?: WorldInfo | null;
   gameTime: WorldTimeInfo;
   isDevMode: boolean;
+  onToggleDevMode: () => void;
   showWalkableOverlay: boolean;
   showRegionBoundsOverlay: boolean;
   showMainAreaPointsOverlay: boolean;
@@ -135,6 +137,12 @@ export function TopBar({
   }, [onHeightChange]);
 
   const handleSwitchToReplay = () => {
+    const currentTl = timelines.find((t) => t.id === selectedTimelineId);
+    const hasReplayContent = currentTl ? currentTl.tickCount > 0 : false;
+    if (!hasReplayContent) {
+      window.alert(t("topbar.noReplayDataAlert"));
+      return;
+    }
     if (autoPlayEnabled) onToggleAutoPlay();
     setViewMode("replay");
     onStartReplay();
@@ -296,53 +304,8 @@ export function TopBar({
           <span style={{ fontSize: 12, color: "#dfe6e9", whiteSpace: "nowrap" }}>{timeLabel}</span>
         </div>
 
-        {/* Right: selectors + mode toggle + play/pause */}
+        {/* Right: mode toggle + play/pause */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-          {/* World selector */}
-          {allWorlds.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: "nowrap" }}>{t("topbar.worldLabel")}</span>
-              <select value={selectedWorldId} onChange={handleWorldChange}
-                disabled={isBusy || inReplayMode} style={{ ...selectStyle, maxWidth: 180 }}>
-                {availableWorlds.length > 0 && (
-                  <optgroup label={t("topbar.myWorlds")}>
-                    {availableWorlds.map((world) => (
-                      <option key={world.id} value={world.id}>{world.worldName}</option>
-                    ))}
-                  </optgroup>
-                )}
-                {libraryWorlds.length > 0 && (
-                  <optgroup label={t("topbar.sampleWorlds")}>
-                    {libraryWorlds.map((world) => (
-                      <option key={world.id} value={world.id}>{world.worldName}</option>
-                    ))}
-                  </optgroup>
-                )}
-              </select>
-            </div>
-          )}
-
-          {/* Timeline selector */}
-          {timelines.length > 0 && (
-            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-              <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: "nowrap" }}>{t("topbar.timelineLabel")}</span>
-              <select value={selectedTimelineId} onChange={handleTimelineChange}
-                disabled={isBusy || inReplayMode} style={{ ...selectStyle, maxWidth: 180 }}>
-                {timelines.map((tl, idx) => (
-                  <option key={tl.id} value={tl.id}>{formatTimelineLabel(tl, timelines.length - idx)}</option>
-                ))}
-              </select>
-            </div>
-          )}
-
-          <button onClick={() => setManagerModalOpen(true)} disabled={isBusy || inReplayMode}
-            style={{ ...chipBtnStyle(managerModalOpen), opacity: inReplayMode ? 0.5 : 1 }}
-            title={t("topbar.manageTitle")}>
-            {t("topbar.manage")}
-          </button>
-
-          <span style={{ width: 1, height: 18, background: "rgba(255,255,255,0.12)", flexShrink: 0 }} />
-
           {/* Mode toggle: Run / Replay */}
           <div style={modeToggleContainerStyle}>
             <button
@@ -354,7 +317,7 @@ export function TopBar({
             </button>
             <button
               onClick={handleSwitchToReplay}
-              disabled={isBusy || !hasReplayContent}
+              disabled={isBusy}
               style={{
                 ...modeToggleBtnStyle(inReplayMode, "replay"),
                 opacity: (!hasReplayContent && !inReplayMode) ? 0.4 : 1,
@@ -405,81 +368,141 @@ export function TopBar({
         </div>
       )}
 
-      {/* Row 2: feature entries + tools */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
-        <button onClick={() => navigate("/graph")} style={chipBtnStyle(false)}>{t("topbar.relations")}</button>
-        <button onClick={() => navigate("/timeline")} style={chipBtnStyle(false)}>{t("topbar.eventLog")}</button>
-        <button
-          onClick={() => setGodPanelOpen(true)}
-          disabled={inReplayMode}
-          style={{ ...chipBtnStyle(godPanelOpen), opacity: inReplayMode ? 0.4 : 1, cursor: inReplayMode ? "not-allowed" : "pointer" }}
-          title={t("topbar.godModeTitle")}
-        >
-          {t("topbar.godMode")}
-        </button>
-        <button
-          onClick={() => { setSandboxChatOpen(true); pauseWorldIfNeeded(); }}
-          disabled={inReplayMode}
-          style={{ ...chipBtnStyle(sandboxChatOpen), opacity: inReplayMode ? 0.4 : 1, cursor: inReplayMode ? "not-allowed" : "pointer" }}
-          title={t("topbar.sandboxChatTitle")}
-        >
-          {t("topbar.sandboxChat")}
-        </button>
-
-        <div style={{ flex: 1 }} />
-
-        {isDevMode && (
-          <>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ fontSize: 11, opacity: 0.72, whiteSpace: "nowrap" }}>{t("topbar.tickLabel")}</span>
-              <select
-                value={String(worldInfo?.sceneConfig.tickDurationMinutes ?? 15)}
-                onChange={handleDevTickGranularityChange}
-                disabled={isBusy || inReplayMode}
-                style={selectStyle}
-                title={t("topbar.tickTitle")}
-              >
-                <option value="15">15 min</option>
-                <option value="30">30 min</option>
-                <option value="60">1 h</option>
+      {/* Row 2: Management + Tools */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, flexWrap: "wrap" }}>
+        
+        {/* Left: World & Timeline Management */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          {/* World selector */}
+          {allWorlds.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: "nowrap" }}>{t("topbar.worldLabel")}</span>
+              <select value={selectedWorldId} onChange={handleWorldChange}
+                disabled={isBusy || inReplayMode} style={{ ...selectStyle, maxWidth: 180 }}>
+                {availableWorlds.length > 0 && (
+                  <optgroup label={t("topbar.myWorlds")}>
+                    {availableWorlds.map((world) => (
+                      <option key={world.id} value={world.id}>{world.worldName}</option>
+                    ))}
+                  </optgroup>
+                )}
+                {libraryWorlds.length > 0 && (
+                  <optgroup label={t("topbar.sampleWorlds")}>
+                    {libraryWorlds.map((world) => (
+                      <option key={world.id} value={world.id}>{world.worldName}</option>
+                    ))}
+                  </optgroup>
+                )}
               </select>
             </div>
-            <button onClick={onToggleWalkableOverlay} style={chipBtnStyle(showWalkableOverlay)}>{t("topbar.devWalkable")}</button>
-            <button onClick={onToggleRegionBoundsOverlay} style={chipBtnStyle(showRegionBoundsOverlay)}>{t("topbar.devRegions")}</button>
-            <button onClick={onToggleMainAreaPointsOverlay} style={chipBtnStyle(showMainAreaPointsOverlay)}>{t("topbar.devPoints")}</button>
-            <button onClick={onToggleInteractiveObjectsOverlay} style={chipBtnStyle(showInteractiveObjectsOverlay)}>{t("topbar.devInteractive")}</button>
-          </>
-        )}
+          )}
 
-        <LanguageToggle />
+          {/* Timeline selector */}
+          {timelines.length > 0 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: "nowrap" }}>{t("topbar.timelineLabel")}</span>
+              <select value={selectedTimelineId} onChange={handleTimelineChange}
+                disabled={isBusy || inReplayMode} style={{ ...selectStyle, maxWidth: 180 }}>
+                {timelines.map((tl, idx) => (
+                  <option key={tl.id} value={tl.id}>{formatTimelineLabel(tl, timelines.length - idx)}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
-        {/* New World + New Timeline: only in run mode */}
-        {inRunMode && (
-          <>
-            <button
-              onClick={() => { pauseWorldIfNeeded(); navigate("/create"); }}
-              disabled={isResetting || isSwitchingWorld}
-              style={newWorldBtnStyle(isResetting || isSwitchingWorld)}
-              title={t("topbar.newWorldTitle")}
-            >
-              {t("topbar.newWorld")}
-            </button>
-            <button
-              onClick={onNewTimeline}
-              disabled={isBusy}
-              style={{
-                ...secondaryBtnStyle,
-                color: "#a3d8ff",
-                borderColor: "rgba(116,185,255,0.4)",
-                background: "rgba(116,185,255,0.12)",
-                cursor: isBusy ? "wait" : "pointer",
-                opacity: isBusy ? 0.7 : 1,
-              }}
-            >
-              {isResetting ? t("topbar.creatingTimeline") : t("topbar.newTimeline")}
-            </button>
-          </>
-        )}
+          <button onClick={() => setManagerModalOpen(true)} disabled={isBusy || inReplayMode}
+            style={{ ...chipBtnStyle(managerModalOpen), opacity: inReplayMode ? 0.5 : 1 }}
+            title={t("topbar.manageTitle")}>
+            {t("topbar.manage")}
+          </button>
+
+          {inRunMode && (
+            <>
+              <span style={{ width: 1, height: 18, background: "rgba(255,255,255,0.12)", flexShrink: 0, margin: "0 2px" }} />
+              <button
+                onClick={onNewTimeline}
+                disabled={isBusy}
+                style={{
+                  ...secondaryBtnStyle,
+                  borderRadius: 999,
+                  color: "#a3d8ff",
+                  borderColor: "rgba(116,185,255,0.4)",
+                  background: "rgba(116,185,255,0.12)",
+                  cursor: isBusy ? "wait" : "pointer",
+                  opacity: isBusy ? 0.7 : 1,
+                }}
+              >
+                {isResetting ? t("topbar.creatingTimeline") : t("topbar.newTimeline")}
+              </button>
+              <button
+                onClick={() => { pauseWorldIfNeeded(); navigate("/create"); }}
+                disabled={isResetting || isSwitchingWorld}
+                style={newWorldBtnStyle(isResetting || isSwitchingWorld)}
+                title={t("topbar.newWorldTitle")}
+              >
+                {t("topbar.newWorld")}
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* Right: feature entries + tools */}
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <button onClick={() => navigate("/graph")} style={chipBtnStyle(false)}>{t("topbar.relations")}</button>
+          <button onClick={() => navigate("/timeline")} style={chipBtnStyle(false)}>{t("topbar.eventLog")}</button>
+          <button
+            onClick={() => setGodPanelOpen(true)}
+            disabled={inReplayMode}
+            style={{ ...chipBtnStyle(godPanelOpen), opacity: inReplayMode ? 0.4 : 1, cursor: inReplayMode ? "not-allowed" : "pointer" }}
+            title={t("topbar.godModeTitle")}
+          >
+            {t("topbar.godMode")}
+          </button>
+          <button
+            onClick={() => { setSandboxChatOpen(true); pauseWorldIfNeeded(); }}
+            disabled={inReplayMode}
+            style={{ ...chipBtnStyle(sandboxChatOpen), opacity: inReplayMode ? 0.4 : 1, cursor: inReplayMode ? "not-allowed" : "pointer" }}
+            title={t("topbar.sandboxChatTitle")}
+          >
+            {t("topbar.sandboxChat")}
+          </button>
+
+          {isDevMode && (
+            <>
+              <span style={{ width: 1, height: 18, background: "rgba(255,255,255,0.12)", flexShrink: 0, margin: "0 2px" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ fontSize: 11, opacity: 0.72, whiteSpace: "nowrap" }}>{t("topbar.tickLabel")}</span>
+                <select
+                  value={String(worldInfo?.sceneConfig.tickDurationMinutes ?? 15)}
+                  onChange={handleDevTickGranularityChange}
+                  disabled={isBusy || inReplayMode}
+                  style={selectStyle}
+                  title={t("topbar.tickTitle")}
+                >
+                  <option value="15">15 min</option>
+                  <option value="30">30 min</option>
+                  <option value="60">1 h</option>
+                </select>
+              </div>
+              <button onClick={onToggleWalkableOverlay} style={chipBtnStyle(showWalkableOverlay)}>{t("topbar.devWalkable")}</button>
+              <button onClick={onToggleRegionBoundsOverlay} style={chipBtnStyle(showRegionBoundsOverlay)}>{t("topbar.devRegions")}</button>
+              <button onClick={onToggleMainAreaPointsOverlay} style={chipBtnStyle(showMainAreaPointsOverlay)}>{t("topbar.devPoints")}</button>
+              <button onClick={onToggleInteractiveObjectsOverlay} style={chipBtnStyle(showInteractiveObjectsOverlay)}>{t("topbar.devInteractive")}</button>
+            </>
+          )}
+
+          <span style={{ width: 1, height: 18, background: "rgba(255,255,255,0.12)", flexShrink: 0, margin: "0 2px" }} />
+
+          <button 
+            onClick={onToggleDevMode} 
+            style={chipBtnStyle(isDevMode)} 
+            title={isDevMode ? t("topbar.disableDevMode") : t("topbar.enableDevMode")}
+          >
+            {isDevMode ? "🛠️ Dev" : "🛠️"}
+          </button>
+
+          <LanguageToggle />
+        </div>
       </div>
 
       <style>{`

@@ -22,7 +22,7 @@ router.get("/", (_req, res) => {
     return {
       id: p.id,
       name: p.name,
-      mbti: p.mbtiType,
+      role: p.role,
       nickname: p.nickname,
       location: s.location,
       mainAreaPointId: s.mainAreaPointId,

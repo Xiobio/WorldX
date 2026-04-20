@@ -7,7 +7,8 @@
     "failedPrefix": "失败：{{error}}",
     "defaultEndTransition": "夜幕降临，一天的喧嚣渐渐平息...",
     "defaultStartTransitionOpen": "夜色缓缓换了一幕",
-    "defaultStartTransitionClosed": "新的一天开始了"
+    "defaultStartTransitionClosed": "新的一天开始了",
+    "closeWorldIntro": "关闭世界介绍"
   },
   "create": {
     "brand": "WorldX",
@@ -27,13 +28,13 @@
     "starting": "启动中...",
     "createBtn": "✨ 创造世界",
     "phase1Title": "设计世界",
-    "phase1Hint": "LLM 正在构思世界背景、机制、角色等要素。",
+    "phase1Hint": "设计世界背景、机制、角色等要素。",
     "phase2Title": "绘制地图",
-    "phase2Hint": "图像模型绘制世界，视觉模型标注细节。",
+    "phase2Hint": "绘制世界、划分功能区、构造可交互元素。",
     "phase3Title": "塑造角色",
-    "phase3Hint": "角色立绘正在生成和优化。",
+    "phase3Hint": "角色立绘生成和动画生成。",
     "phase4Title": "组装模拟",
-    "phase4Hint": "配置、导航点和运行时正在就位。",
+    "phase4Hint": "将各元素组装成完整世界",
     "sizeQuick": "快速草稿",
     "sizeBalanced": "均衡（推荐）",
     "sizeCinematic": "精细画质",
@@ -62,7 +63,7 @@
     "statusSwitchingWorld": "切换世界中",
     "statusSwitchingTimeline": "切换时间线中",
     "statusCreatingTimeline": "创建时间线中",
-    "statusSimulating": "模拟中",
+    "statusSimulating": "运行中",
     "statusAutoPlay": "自动运行",
     "statusPaused": "已暂停",
     "statusError": "错误",
@@ -74,6 +75,7 @@
     "run": "运行模式",
     "replay": "回放模式",
     "noReplayData": "还没有可回放的数据",
+    "noReplayDataAlert": "当前时间线还没产生数据，无法回放。请先在运行模式下运行一会儿~",
     "switchToReplay": "切换到回放模式",
     "pauseRun": "暂停运行",
     "pauseReplay": "暂停播放",
@@ -105,7 +107,9 @@
     "devPoints": "点位",
     "devInteractive": "可交互元素",
     "myWorlds": "我的世界",
-    "sampleWorlds": "示例世界"
+    "sampleWorlds": "示例世界",
+    "enableDevMode": "开启开发者模式",
+    "disableDevMode": "关闭开发者模式"
   },
   "sidePanel": {
     "charPanel": "角色面板",

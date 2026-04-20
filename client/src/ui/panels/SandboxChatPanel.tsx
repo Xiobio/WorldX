@@ -21,7 +21,7 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
   const [charId, setCharId] = useState("");
   const [identity, setIdentity] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [activeChar, setActiveChar] = useState<{ id: string; name: string; mbtiType: string } | null>(null);
+  const [activeChar, setActiveChar] = useState<{ id: string; name: string; role: string } | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
@@ -235,7 +235,7 @@ export function SandboxChatPanel({ onClose }: { onClose: () => void }) {
               <div>
                 <span style={{ fontWeight: 600, color: "#c9d8ff" }}>{activeChar.name}</span>
                 <span style={{ opacity: 0.55, fontSize: 11, marginLeft: 6 }}>
-                  ({activeChar.mbtiType})
+                  ({activeChar.role})
                 </span>
               </div>
               <button onClick={resetSession} style={smallBtnStyle}>{t("sandbox.backToSelect")}</button>

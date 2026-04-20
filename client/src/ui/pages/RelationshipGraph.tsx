@@ -5,7 +5,7 @@ import { Network, type Node } from "vis-network";
 import { DataSet } from "vis-data";
 import { apiClient } from "../services/api-client";
 import type { GraphData } from "../../types/api";
-import { MBTI_COLORS, CHARACTER_COLORS } from "../../config/game-config";
+import { CHARACTER_COLORS } from "../../config/game-config";
 
 const LABEL_COLORS: Record<string, string> = {
   friend: "#00b894",
@@ -63,10 +63,10 @@ export function RelationshipGraph() {
       const nodes = new DataSet<Node>(
         data.nodes.map((n) => {
           const nameHash = n.name.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-          const colorVal = MBTI_COLORS[n.mbti] || CHARACTER_COLORS[nameHash % CHARACTER_COLORS.length];
+          const colorVal = CHARACTER_COLORS[nameHash % CHARACTER_COLORS.length];
           return {
             id: n.id,
-            label: n.mbti && n.mbti !== "NPC" ? `${n.name}\n(${n.mbti})` : n.name,
+            label: n.name,
             color: {
               background: `#${colorVal.toString(16).padStart(6, "0")}`,
               border: "#ffffff44",
