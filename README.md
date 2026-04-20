@@ -1,121 +1,125 @@
 <p align="center">
   <h1 align="center">WorldX</h1>
-  <p align="center"><strong>One Sentence, One World.</strong></p>
+  <p align="center"><strong>一句话，一个世界。</strong></p>
   <p align="center">
-    Type a single sentence. Watch an entire AI world come to life — unique maps, autonomous characters, emergent stories.
+    输入一句话，看一整个 AI 世界在你眼前诞生 —— 独一无二的地图、自主行动的角色、涌现的故事。
   </p>
 </p>
 
-<!-- TODO: Add hero screenshot/video here -->
+<p align="center">
+  <a href="./README_EN.md">English</a> | 中文
+</p>
+
+<!-- TODO: 在这里添加截图/视频 -->
 <!-- <p align="center"><img src="docs/hero.png" width="720" /></p> -->
 
 ---
 
-**WorldX** turns a single text prompt into a fully autonomous AI world. The system designs the world, generates original maps and character art, then runs a living simulation where AI agents make decisions, form relationships, have conversations, and create emergent narratives — all without human intervention.
+**WorldX** 可以将一句话变成一个完全自主运行的 AI 世界。系统会自动设计世界观、生成原创地图与角色立绘，然后运行一个活的模拟 —— AI 角色自主决策、建立关系、展开对话、创造涌现叙事，全程无需人工干预。
 
-> "A Song Dynasty night market with fortune tellers and wandering poets"
+> "北宋汴京的夜市街，有卖炊饼的、算命的、当铺掌柜，还有一个穿越来的现代人"
 
-That's all it takes. WorldX handles the rest.
+只需要这一句话，剩下的交给 WorldX。
 
-## Highlights
+## 特性
 
-- **One-sentence world creation** — describe any scenario and watch it materialize
-- **AI-generated maps & characters** — original art created to match your description, not templates
-- **Autonomous agent simulation** — characters make decisions, form relationships, hold conversations
-- **Memory & personality** — agents remember past events and act according to distinct personalities
-- **Multi-day evolution** — worlds evolve across day/night cycles with scene transitions
-- **God mode** — broadcast events, whisper memories, edit character profiles at runtime
-- **Timeline system** — branch, replay, and compare different simulation runs
-- **Bilingual UI** — Chinese / English interface with one-click switching
+- **一句话创造世界** —— 描述任何场景，看着它变为现实
+- **AI 生成地图与角色** —— 原创美术，不是模板拼接
+- **自主 Agent 模拟** —— 角色自主决策、建立关系、展开对话
+- **记忆与人格** —— 角色记住过去的经历，并据此形成独特的行为模式
+- **多日演化** —— 世界跨越昼夜循环持续演进
+- **上帝模式** —— 广播事件、给角色植入记忆、实时编辑角色档案
+- **时间线系统** —— 分支、回放、对比不同的模拟走向
+- **中英双语界面** —— 一键切换
 
-## Architecture
+## 架构
 
 ```
- "A cozy mountain village with a mysterious blacksmith"
+ "一座隐藏着铁匠秘密的雪山小镇"
                          │
                          ▼
               ┌─────────────────────┐
-              │   Orchestrator      │  LLM designs world, characters, rules
+              │     编排引擎        │  LLM 设计世界观、角色、规则
               └──────────┬──────────┘
                     ┌────┴────┐
                     ▼         ▼
-              Map Gen    Character Gen    AI-generated art pipelines
+              地图生成    角色生成       AI 美术生成管线
                     │         │
                     └────┬────┘
                          ▼
               ┌─────────────────────┐
-              │  Simulation Server  │  Decisions, dialogue, memory, relationships
+              │     模拟服务器      │  决策、对话、记忆、关系
               └──────────┬──────────┘
                          ▼
               ┌─────────────────────┐
-              │    Game Client      │  Phaser + React — watch AI lives unfold
+              │     游戏客户端      │  Phaser + React —— 观看 AI 角色的生活
               └─────────────────────┘
 ```
 
-## Quick Start
+## 快速开始
 
-### Prerequisites
+### 前置条件
 
 - **Node.js 18+**
-- **API keys** — see [Model Configuration](#model-configuration) below
+- **API Key** —— 详见下方 [模型配置](#模型配置)
 
-### Option A: Preview Mode (fastest)
+### 方式 A：预览模式（最快上手）
 
-Just want to see WorldX in action? Two pre-built worlds are included. You only need a **Simulation** model key.
+想先看看效果？项目内置了两个预生成的世界，只需要配置 **世界驱动** 模型的 Key 即可运行。
 
 ```bash
 git clone https://github.com/YGYOOO/WorldX.git
 cd WorldX
 cp .env.example .env
-# Edit .env — fill in SIMULATION_* fields only
+# 编辑 .env —— 只填 SIMULATION_* 三行即可
 npm install && cd client && npm install && cd ../server && npm install && cd ..
 npm run dev
 ```
 
-Open `http://localhost:3200` — pick a pre-built world and hit Play.
+打开 `http://localhost:3200`，选择一个内置世界，点击播放。
 
-### Option B: Full Creation
+### 方式 B：完整创建
 
-Generate your own worlds from scratch. Requires all 4 model keys.
+从零生成你自己的世界，需要配齐全部 4 组 Key。
 
 ```bash
-# Edit .env — fill in all 4 model sections
+# 编辑 .env —— 填写全部 4 组模型配置
 npm run dev
 ```
 
-Open `http://localhost:3200/create`, type a sentence, and watch your world come to life.
+打开 `http://localhost:3200/create`，输入一句话，看着你的世界诞生。
 
-Or use the CLI:
+也可以用命令行：
 
 ```bash
-npm run create -- "A cyberpunk noodle shop where hackers and androids share rumors"
+npm run create -- "赛博朋克风格的深夜拉面馆，黑客和仿生人在这里交换情报"
 ```
 
-## Model Configuration
+## 模型配置
 
-WorldX uses **4 model roles**, each configurable independently. All use the OpenAI-compatible `chat/completions` protocol — any compatible platform works.
+WorldX 使用 **4 个模型角色**，各自独立配置。全部采用 OpenAI 兼容的 `chat/completions` 协议 —— 任何兼容平台均可使用。
 
-| Role | Env Prefix | What It Does | Recommended |
-|------|-----------|-------------|-------------|
-| **Orchestrator** | `ORCHESTRATOR_` | Designs world structure, characters, rules | Strong reasoning model (e.g. `gemini-2.5-pro`) |
-| **Image Gen** | `IMAGE_GEN_` | Generates map art and character sprites | Image-capable model (e.g. `gemini-3.1-flash-image-preview`) |
-| **Vision** | `VISION_` | Reviews map quality, locates regions/elements | Strong multimodal model (e.g. `gemini-3.1-pro-preview`) |
-| **Simulation** | `SIMULATION_` | Drives runtime character behavior | Any model — cheaper is fine (e.g. `gemini-2.5-flash`) |
+| 角色 | 环境变量前缀 | 用途 | 推荐模型 |
+|------|-------------|------|---------|
+| **编排引擎** | `ORCHESTRATOR_` | 设计世界结构、角色、规则 | 较强推理模型（如 `gemini-2.5-pro`） |
+| **绘图模型** | `IMAGE_GEN_` | 生成地图美术和角色立绘 | 文生图模型（如 `gemini-3.1-flash-image-preview`） |
+| **绘图审查** | `VISION_` | 审查地图质量、定位区域/元素 | 多模态模型（如 `gemini-3.1-pro-preview`） |
+| **世界驱动** | `SIMULATION_` | 驱动运行时角色行为 | 任意模型，便宜的就行（如 `gemini-2.5-flash`） |
 
-Each role needs 3 env vars:
+每个角色需要 3 个环境变量：
 
 ```env
-{ROLE}_BASE_URL=https://openrouter.ai/api/v1    # API base URL
-{ROLE}_API_KEY=sk-or-v1-xxxx                     # API key
-{ROLE}_MODEL=google/gemini-2.5-pro-preview       # Model identifier
+{ROLE}_BASE_URL=https://openrouter.ai/api/v1    # API 地址
+{ROLE}_API_KEY=sk-or-v1-xxxx                     # API Key
+{ROLE}_MODEL=google/gemini-2.5-pro-preview       # 模型标识
 ```
 
-### Platform Examples
+### 平台配置示例
 
 <details>
-<summary><strong>OpenRouter</strong> (recommended — one key for all models)</summary>
+<summary><strong>OpenRouter</strong>（推荐 —— 一个 Key 搞定全部模型）</summary>
 
-Get a key at [openrouter.ai](https://openrouter.ai):
+在 [openrouter.ai](https://openrouter.ai) 获取 Key：
 
 ```env
 ORCHESTRATOR_BASE_URL=https://openrouter.ai/api/v1
@@ -138,9 +142,9 @@ SIMULATION_MODEL=google/gemini-2.5-flash-preview
 </details>
 
 <details>
-<summary><strong>Google AI Studio</strong> (free tier available)</summary>
+<summary><strong>Google AI Studio</strong>（有免费额度）</summary>
 
-Get a key at [aistudio.google.com](https://aistudio.google.com/apikey):
+在 [aistudio.google.com](https://aistudio.google.com/apikey) 获取 Key：
 
 ```env
 ORCHESTRATOR_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
@@ -163,27 +167,27 @@ SIMULATION_MODEL=gemini-2.5-flash-preview
 </details>
 
 <details>
-<summary><strong>Mix & match</strong> (different platforms per role)</summary>
+<summary><strong>混合搭配</strong>（不同角色使用不同平台）</summary>
 
-You can use a different platform for each role. For example, Google AI Studio for generation (free tier) and a cheaper provider for simulation:
+你可以为每个角色使用不同的平台。例如用 Google AI Studio 免费额度来生成，用更便宜的供应商来驱动模拟：
 
 ```env
-# World design — Google AI Studio
+# 世界设计 — Google AI Studio
 ORCHESTRATOR_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 ORCHESTRATOR_API_KEY=AIzaSy...
 ORCHESTRATOR_MODEL=gemini-2.5-pro-preview
 
-# Art generation — Google AI Studio
+# 美术生成 — Google AI Studio
 IMAGE_GEN_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 IMAGE_GEN_API_KEY=AIzaSy...
 IMAGE_GEN_MODEL=gemini-3.1-flash-image-preview
 
-# Vision review — Google AI Studio
+# 视觉审查 — Google AI Studio
 VISION_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 VISION_API_KEY=AIzaSy...
 VISION_MODEL=gemini-3.1-pro-preview
 
-# Simulation — DeepSeek (cost-effective for high-volume runtime calls)
+# 模拟运行 — DeepSeek（高频调用更划算）
 SIMULATION_BASE_URL=https://api.deepseek.com/v1
 SIMULATION_API_KEY=sk-...
 SIMULATION_MODEL=deepseek-chat
@@ -191,85 +195,85 @@ SIMULATION_MODEL=deepseek-chat
 
 </details>
 
-## Controls
+## 操控
 
-Once a world is running:
+世界运行后，你可以：
 
-| Control | Description |
-|---------|-------------|
-| **Run / Replay** | Toggle between live simulation and recorded playback |
-| **Play / Pause** | Start or pause the simulation |
-| **Relations** | View the relationship graph between characters |
-| **Event Log** | Browse the timeline of all events |
-| **God Panel** | Broadcast events, whisper to characters, edit profiles |
-| **Sandbox Chat** | Have a private conversation with any character |
-| **New Timeline** | Branch a fresh simulation from the same world |
+| 操控 | 说明 |
+|------|------|
+| **运行 / 回放** | 在实时模拟和录像回放之间切换 |
+| **播放 / 暂停** | 开始或暂停模拟 |
+| **关系图谱** | 查看角色之间的关系网络 |
+| **事件日志** | 浏览所有事件的时间线 |
+| **上帝面板** | 广播事件、给角色注入记忆、编辑角色档案 |
+| **沙盒对话** | 与任意角色进行私密对话 |
+| **新时间线** | 从同一个世界分支出全新的模拟 |
 
-## Project Structure
+## 项目结构
 
 ```
 WorldX/
-├── orchestrator/         # LLM-driven world design & config generation
+├── orchestrator/         # LLM 驱动的世界设计与配置生成
 │   ├── src/
-│   │   ├── index.mjs           # Pipeline entry: sentence → world
-│   │   ├── world-designer.mjs  # LLM world design
+│   │   ├── index.mjs           # 管线入口：一句话 → 世界
+│   │   ├── world-designer.mjs  # LLM 世界设计
 │   │   └── config-generator.mjs
 │   └── prompts/
-│       └── design-world.md     # World design prompt template
-├── generators/           # Art generation pipelines
-│   ├── map/              # Map generation (multi-step with review loop)
-│   └── character/        # Spritesheet generation (with chromakey)
-├── server/               # Simulation engine (Express + SQLite + LLM)
+│       └── design-world.md     # 世界设计 prompt 模板
+├── generators/           # 美术生成管线
+│   ├── map/              # 地图生成（多步骤 + 审查循环）
+│   └── character/        # 角色立绘生成（含抠图）
+├── server/               # 模拟引擎（Express + SQLite + LLM）
 │   └── src/
 │       ├── core/         # WorldManager, CharacterManager
 │       ├── simulation/   # SimulationEngine, DecisionMaker, DialogueGenerator
 │       ├── llm/          # LLMClient, PromptBuilder
-│       └── store/        # SQLite persistence (per-timeline)
-├── client/               # Game client (Phaser 3 + React 19)
+│       └── store/        # SQLite 持久化（每时间线独立）
+├── client/               # 游戏客户端（Phaser 3 + React 19）
 │   └── src/
 │       ├── scenes/       # BootScene, WorldScene
-│       ├── ui/           # React overlay panels
-│       └── systems/      # Camera, Pathfinding, Playback
-├── shared/               # Shared utilities (structured output parsing)
-├── library/worlds/       # Pre-built example worlds
-├── output/worlds/        # Your generated worlds
-└── .env.example          # Configuration template
+│       ├── ui/           # React 覆盖层面板
+│       └── systems/      # 相机、寻路、回放
+├── shared/               # 共享工具（结构化输出解析）
+├── library/worlds/       # 内置示例世界
+├── output/worlds/        # 你生成的世界
+└── .env.example          # 配置模板
 ```
 
-## How It Works
+## 工作原理
 
-### World Generation
+### 世界生成
 
-1. **Design** — The orchestrator LLM designs the world: regions, characters, social dynamics, time rules
-2. **Map** — AI generates a top-down map image, then localizes walkable areas, regions, and interactive elements through a multi-step review pipeline
-3. **Characters** — AI generates sprite sheets for each character, with automatic chromakey cleanup
-4. **Config** — Everything is bridged into runtime-ready configs (world.json, scene.json, character JSONs, TMJ map)
+1. **设计** —— 编排引擎 LLM 设计世界：区域、角色、社交关系、时间规则
+2. **地图** —— AI 生成俯视角地图，再通过多步审查管线定位可行走区域、功能区域和交互元素
+3. **角色** —— AI 为每个角色生成精灵图，自动完成绿幕抠图
+4. **配置** —— 所有资产桥接为运行时配置（world.json、scene.json、角色 JSON、TMJ 地图）
 
-### Simulation
+### 模拟运行
 
-Each tick, every character:
-1. **Perceives** — sees nearby characters, locations, recent events
-2. **Decides** — chooses an action (move, talk, observe, interact) based on personality and context
-3. **Acts** — executes the decision, potentially triggering dialogue, memory formation, or relationship changes
-4. **Remembers** — stores significant events as memories that influence future behavior
+每个 tick，每个角色会：
+1. **感知** —— 看到附近的角色、地点、近期事件
+2. **决策** —— 根据性格和上下文选择行动（移动、对话、观察、互动）
+3. **执行** —— 执行决策，可能触发对话、记忆形成或关系变化
+4. **记忆** —— 将重要事件存为记忆，影响未来行为
 
-### Timeline System
+### 时间线系统
 
-Each simulation run is recorded as a **timeline** — an independent event stream with its own database. You can:
-- Run multiple timelines for the same world
-- Replay any timeline frame by frame
-- Compare how the same world evolves differently
+每次模拟运行都会记录为一条 **时间线** —— 独立的事件流，拥有自己的数据库。你可以：
+- 为同一个世界运行多条时间线
+- 逐帧回放任意时间线
+- 对比同一个世界的不同演化轨迹
 
-## Development
+## 开发
 
 ```bash
-npm run dev          # Start both client and server in dev mode
-npm run create       # Generate a new world via CLI
+npm run dev          # 同时启动客户端和服务器（开发模式）
+npm run create       # 通过命令行生成新世界
 ```
 
-- Client: `http://localhost:3200`
-- Server: `http://localhost:3100`
-- Dev overlays: append `?dev=1` to the client URL
+- 客户端：`http://localhost:3200`
+- 服务器：`http://localhost:3100`
+- 开发覆盖层：在客户端 URL 后加 `?dev=1`
 
 ## License
 
