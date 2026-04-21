@@ -250,6 +250,18 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
     };
   }, []);
 
+  // Auto-enter replay mode when ?mode=replay is in the URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("mode") !== "replay") return;
+    const timelineId = worldInfo?.currentTimelineId;
+    if (!timelineId) return;
+    const timer = setTimeout(() => {
+      eventBus.emit("start_replay", timelineId);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [worldInfo?.currentTimelineId, location.search, eventBus]);
+
   useEffect(() => {
     const onTimeUpdate = (time: WorldTimeInfo) => setGameTime(time);
     const onCharClick = (id: string) => setSelectedCharId(id);
@@ -339,16 +351,6 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
     }
   }, [t]);
 
-  const handleStartReplay = useCallback(() => {
-    const timelineId = worldInfo?.currentTimelineId;
-    if (!timelineId) return;
-    eventBus.emit("start_replay", timelineId);
-  }, [eventBus, worldInfo?.currentTimelineId]);
-
-  const handleStopReplay = useCallback(() => {
-    eventBus.emit("stop_replay");
-  }, [eventBus]);
-
   const handleToggleFollowChar = useCallback(
     (id: string) => {
       if (followedCharId === id) {
@@ -413,15 +415,14 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
             isResetting={isResetting}
             isReplaying={isReplaying}
             replayProgress={replayProgress}
-            onStartReplay={handleStartReplay}
-            onStopReplay={handleStopReplay}
             onHeightChange={setTopBarHeight}
           />
-          {worldInfo && (worldInfo.timelineTickCount ?? 1) === 0 && (worldInfo.originalPrompt?.trim() || worldInfo.worldDescription?.trim()) && (
+          {worldInfo && (worldInfo.originalPrompt?.trim() || worldInfo.worldDescription?.trim()) && (
             <WorldIntroBanner
               worldKey={worldInfo.currentWorldId || worldInfo.worldName}
               worldName={worldInfo.worldName}
               worldDescription={worldInfo.originalPrompt?.trim() || worldInfo.worldDescription}
+              hasRun={(worldInfo.timelineTickCount ?? 0) > 0}
               topOffset={Math.max(topBarHeight, DEFAULT_TOP_BAR_HEIGHT)}
             />
           )}

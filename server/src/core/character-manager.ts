@@ -109,7 +109,7 @@ export class CharacterManager {
 
   /** Editable subset of CharacterProfile fields. */
   static readonly EDITABLE_FIELDS = [
-    "coreTraits", "coreMotivation", "coreValues", "speakingStyle",
+    "coreMotivation", "coreValues", "speakingStyle",
     "fears", "backstory", "socialStyle", "tags",
   ] as const;
 

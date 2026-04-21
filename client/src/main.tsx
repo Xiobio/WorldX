@@ -12,7 +12,7 @@ const game = new Phaser.Game({
   height: window.innerHeight,
   parent: "game-root",
   transparent: true,
-  render: { antialias: true, roundPixels: true },
+  render: { antialias: true, roundPixels: false },
   scale: { mode: Phaser.Scale.RESIZE },
   scene: [BootScene, WorldScene],
 });

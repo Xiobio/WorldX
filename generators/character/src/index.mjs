@@ -44,6 +44,7 @@ async function main() {
   charName = extractOption("--name");
   charRole = extractOption("--role") ?? "";
   worldVisualContext = extractOption("--world-visual-context") ?? "";
+  const ipSource = extractOption("--ip-source") ?? "";
 
   const description = args.join(" ").trim();
   if (!description) {
@@ -60,6 +61,7 @@ async function main() {
   console.log(`ID:          ${charId}`);
   console.log(`Name:        ${charName}`);
   if (charRole) console.log(`Role:        ${charRole}`);
+  if (ipSource) console.log(`IP source:   ${ipSource}`);
   if (worldVisualContext) console.log(`World ref:   ${worldVisualContext}`);
   console.log(`Description: ${description}`);
   console.log();
@@ -81,6 +83,7 @@ async function main() {
     .replace(/\{\{characterRole\}\}/g, charRole || "未特别指定")
     .replace(/\{\{characterAppearance\}\}/g, description)
     .replace(/\{\{worldVisualContext\}\}/g, worldVisualContext || "未提供")
+    .replace(/\{\{ipSource\}\}/g, ipSource || "无")
     .replace(/\{\{characterDescription\}\}/g, description);
 
   let spriteBuffer;

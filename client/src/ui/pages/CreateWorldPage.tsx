@@ -22,9 +22,9 @@ import { LanguageToggle } from "../components/LanguageToggle";
 type Mode = "input" | "running" | "done" | "error";
 
 const PROMPT_EXAMPLES = [
-  "宋朝繁华夜市，有算命先生、卖艺人、小偷、女侠、书生、酒鬼。",
+  "末日超市：世界末日后，仅存的 6 个幸存者挤在一个封闭的超市里。有公司高管、下岗程序员、大学教授、宅男、退休军人和一个小学生",
   "A cozy mountain village in autumn, with a blacksmith, a tea house owner, a wandering monk and a curious child.",
-  "未来都市的天台花园，有黑客、植物学家、退役机器人、流浪猫和一位失忆的诗人。",
+  "5个反派被关在了一个无法逃脱的监狱里：容嬷嬷、伏地魔（强大力量被封印）、灭霸（强大力量被封印）、弗利沙（强大力量被封印）、夜神月（死亡笔记丢了）",
 ];
 
 export function CreateWorldPage({
@@ -241,7 +241,7 @@ export function CreateWorldPage({
             conflictJobId={conflictJobId}
             onSubmit={onSubmit}
             onAttachToConflict={onAttachToConflict}
-            libraryWorlds={!hasExistingWorlds ? libraryWorlds : []}
+            libraryWorlds={libraryWorlds}
             loadingSampleWorld={loadingSampleWorld}
             onLoadSampleWorld={onLoadSampleWorld}
           />

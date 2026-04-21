@@ -64,7 +64,7 @@ export class BootScene extends Phaser.Scene {
   create() {
     for (const key of this.textures.getTextureKeys()) {
       if (key === "world-base" || key.startsWith("char_")) {
-        this.textures.get(key).setFilter(Phaser.Textures.FilterMode.NEAREST);
+        this.textures.get(key).setFilter(Phaser.Textures.FilterMode.LINEAR);
       }
     }
     console.log("[BootScene] Loading complete, starting WorldScene");

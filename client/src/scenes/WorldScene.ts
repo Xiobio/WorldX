@@ -137,6 +137,9 @@ export class WorldScene extends Phaser.Scene {
     this.eventBus.on("stop_replay", () => {
       this.playbackController.stopReplay();
     });
+    this.eventBus.on("replay_ended", () => {
+      void this.syncCharactersFromServer();
+    });
     this.eventBus.on("set_replay_mode", (payload: { active: boolean }) => {
       this.isReplaying = payload.active;
     });
@@ -252,7 +255,12 @@ export class WorldScene extends Phaser.Scene {
       let sprite = this.characterSprites.get(char.id);
 
       if (sprite) {
+        sprite.stopMoving();
+        sprite.clearTransientUi();
         sprite.setPosition(pos.x, pos.y);
+        sprite.setCurrentAction(null);
+        sprite.setActionIcon("");
+        sprite.setActionLabel(null);
       } else {
         const color = getCharacterColor(index);
         sprite = new CharacterSprite(this, pos.x, pos.y, {
@@ -881,7 +889,9 @@ export class WorldScene extends Phaser.Scene {
     this.cameraController?.update();
     this.pathfinder?.update();
     this.playbackController?.update(delta);
-    this.characterMovement?.updateAmbientMovement(performance.now());
+    if (!this.isReplaying) {
+      this.characterMovement?.updateAmbientMovement(performance.now());
+    }
     const zoom = this.cameras.main.zoom;
     for (const sprite of this.characterSprites.values()) {
       sprite.syncOverlayZoom(zoom);

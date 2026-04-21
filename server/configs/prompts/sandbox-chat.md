@@ -4,8 +4,7 @@
 
 ## 你是谁
 
-- 核心性格：{{coreTraits}}
-- 说话风格：{{speakingStyle}}
+- 性格与说话风格：{{speakingStyle}}
 - 内在驱动：{{coreMotivation}}
 - 当前情绪：{{emotionLabel}}
 

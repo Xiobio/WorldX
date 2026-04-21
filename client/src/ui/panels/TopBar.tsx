@@ -34,8 +34,6 @@ export function TopBar({
   isResetting,
   isReplaying,
   replayProgress,
-  onStartReplay,
-  onStopReplay,
   onHeightChange,
 }: {
   worldInfo?: WorldInfo | null;
@@ -57,8 +55,6 @@ export function TopBar({
   isResetting: boolean;
   isReplaying: boolean;
   replayProgress: { current: number; total: number } | null;
-  onStartReplay: () => void;
-  onStopReplay: () => void;
   onHeightChange?: (height: number) => void;
 }) {
   const { t } = useTranslation();
@@ -75,7 +71,9 @@ export function TopBar({
   const [timelines, setTimelines] = useState<TimelineMeta[]>([]);
   const [selectedTimelineId, setSelectedTimelineId] = useState("");
   const [isSwitchingTimeline, setIsSwitchingTimeline] = useState(false);
-  const [viewMode, setViewMode] = useState<ViewMode>("run");
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    () => new URLSearchParams(window.location.search).get("mode") === "replay" ? "replay" : "run",
+  );
   const barRef = useRef<HTMLDivElement | null>(null);
   const isRunning = simStatus === "running";
   const isBusy = isRunning || isResetting || isSwitchingWorld || isSwitchingTimeline || isChangingTickGranularity;
@@ -85,8 +83,12 @@ export function TopBar({
   const inRunMode = viewMode === "run" && !isReplaying;
   const inReplayMode = viewMode === "replay" || isReplaying;
 
+  const wasReplayingRef = useRef(isReplaying);
   useEffect(() => {
-    if (!isReplaying && viewMode === "replay") setViewMode("run");
+    if (wasReplayingRef.current && !isReplaying && viewMode === "replay") {
+      setViewMode("run");
+    }
+    wasReplayingRef.current = isReplaying;
   }, [isReplaying, viewMode]);
 
   useEffect(() => {
@@ -136,21 +138,26 @@ export function TopBar({
     };
   }, [onHeightChange]);
 
-  const handleSwitchToReplay = () => {
-    const currentTl = timelines.find((t) => t.id === selectedTimelineId);
-    const hasReplayContent = currentTl ? currentTl.tickCount > 0 : false;
-    if (!hasReplayContent) {
-      window.alert(t("topbar.noReplayDataAlert"));
-      return;
+  const handleSwitchToReplay = async () => {
+    try {
+      const fresh = await apiClient.getTimelines();
+      const currentTl = fresh.timelines.find((tl) => tl.id === selectedTimelineId);
+      if (!currentTl || currentTl.tickCount <= 0) {
+        window.alert(t("topbar.noReplayDataAlert"));
+        return;
+      }
+    } catch {
+      /* network error — let the page reload attempt replay anyway */
     }
-    if (autoPlayEnabled) onToggleAutoPlay();
-    setViewMode("replay");
-    onStartReplay();
+    const params = new URLSearchParams(window.location.search);
+    params.set("mode", "replay");
+    window.location.search = params.toString();
   };
 
   const handleSwitchToRun = () => {
-    if (isReplaying) onStopReplay();
-    setViewMode("run");
+    const params = new URLSearchParams(window.location.search);
+    params.delete("mode");
+    window.location.search = params.toString();
   };
 
   const statusLabel =
@@ -210,7 +217,9 @@ export function TopBar({
     setIsSwitchingTimeline(true);
     try {
       await apiClient.loadTimeline(nextTimelineId);
-      window.location.reload();
+      const params = new URLSearchParams(window.location.search);
+      if (inReplayMode) params.set("mode", "replay");
+      window.location.search = params.toString();
     } catch (error) {
       console.warn("[TopBar] Failed to switch timeline:", error);
       window.alert(t("topbar.switchFailed", { error: error instanceof Error ? error.message : String(error) }));
@@ -252,7 +261,9 @@ export function TopBar({
     setIsSwitchingWorld(true);
     try {
       await apiClient.switchWorld(nextWorldId);
-      window.location.reload();
+      const params = new URLSearchParams(window.location.search);
+      if (inReplayMode) params.set("mode", "replay");
+      window.location.search = params.toString();
     } catch (error) {
       setSelectedWorldId(previousWorldId);
       console.warn("[TopBar] Failed to switch world:", error);
@@ -260,9 +271,6 @@ export function TopBar({
       setIsSwitchingWorld(false);
     }
   };
-
-  const currentTl = timelines.find((t) => t.id === selectedTimelineId);
-  const hasReplayContent = currentTl ? currentTl.tickCount > 0 : false;
 
   return (
     <div
@@ -318,11 +326,8 @@ export function TopBar({
             <button
               onClick={handleSwitchToReplay}
               disabled={isBusy}
-              style={{
-                ...modeToggleBtnStyle(inReplayMode, "replay"),
-                opacity: (!hasReplayContent && !inReplayMode) ? 0.4 : 1,
-              }}
-              title={!hasReplayContent ? t("topbar.noReplayData") : t("topbar.switchToReplay")}
+              style={modeToggleBtnStyle(inReplayMode, "replay")}
+              title={t("topbar.switchToReplay")}
             >
               {t("topbar.replay")}
             </button>
@@ -378,7 +383,7 @@ export function TopBar({
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: "nowrap" }}>{t("topbar.worldLabel")}</span>
               <select value={selectedWorldId} onChange={handleWorldChange}
-                disabled={isBusy || inReplayMode} style={{ ...selectStyle, maxWidth: 180 }}>
+                disabled={isBusy} style={{ ...selectStyle, maxWidth: 180 }}>
                 {availableWorlds.length > 0 && (
                   <optgroup label={t("topbar.myWorlds")}>
                     {availableWorlds.map((world) => (
@@ -402,7 +407,7 @@ export function TopBar({
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <span style={{ fontSize: 11, opacity: 0.6, whiteSpace: "nowrap" }}>{t("topbar.timelineLabel")}</span>
               <select value={selectedTimelineId} onChange={handleTimelineChange}
-                disabled={isBusy || inReplayMode} style={{ ...selectStyle, maxWidth: 180 }}>
+                disabled={isBusy} style={{ ...selectStyle, maxWidth: 180 }}>
                 {timelines.map((tl, idx) => (
                   <option key={tl.id} value={tl.id}>{formatTimelineLabel(tl, timelines.length - idx)}</option>
                 ))}
@@ -410,8 +415,8 @@ export function TopBar({
             </div>
           )}
 
-          <button onClick={() => setManagerModalOpen(true)} disabled={isBusy || inReplayMode}
-            style={{ ...chipBtnStyle(managerModalOpen), opacity: inReplayMode ? 0.5 : 1 }}
+          <button onClick={() => setManagerModalOpen(true)} disabled={isBusy}
+            style={chipBtnStyle(managerModalOpen)}
             title={t("topbar.manageTitle")}>
             {t("topbar.manage")}
           </button>

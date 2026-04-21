@@ -128,7 +128,6 @@ function normalizeCharacterProfile(raw: any): CharacterProfile | null {
   const socialStyle = normalizeSocialStyle(raw.socialStyle);
   const extraversionLevel = normalizeExtraversionLevel(raw.extraversionLevel, socialStyle);
   const intuitionLevel = normalizeIntuitionLevel(raw.intuitionLevel, raw);
-  const coreTraits = normalizeCoreTraits(raw);
 
   return {
     id: raw.id,
@@ -141,7 +140,6 @@ function normalizeCharacterProfile(raw: any): CharacterProfile | null {
       typeof raw.appearanceHint === "string" && raw.appearanceHint.trim()
         ? raw.appearanceHint.trim()
         : undefined,
-    coreTraits,
     coreMotivation: raw.coreMotivation || raw.motivation || raw.role || "在这个世界中过好自己的生活",
     coreValues: Array.isArray(raw.coreValues) ? raw.coreValues : [],
     speakingStyle:
@@ -160,7 +158,7 @@ function normalizeCharacterProfile(raw: any): CharacterProfile | null {
     skills: Array.isArray(raw.skills) ? raw.skills : [],
     writeDiary: raw.writeDiary ?? true,
     fourthWallCandidate: raw.fourthWallCandidate ?? false,
-    tags: Array.isArray(raw.tags) ? raw.tags : coreTraits,
+    tags: Array.isArray(raw.tags) ? raw.tags : [],
     initialMemories: normalizeInitialMemories(raw.initialMemories, startLocation),
     anchor: normalizeAnchor(raw.anchor),
     iconicCues: normalizeIconicCues(raw.iconicCues),
@@ -277,16 +275,6 @@ function normalizeIntuitionLevel(value: unknown, raw: any): number {
     return 0.7;
   }
   return 0.5;
-}
-
-function normalizeCoreTraits(raw: any): string[] {
-  if (Array.isArray(raw?.coreTraits) && raw.coreTraits.length > 0) {
-    return raw.coreTraits.filter((item: unknown) => typeof item === "string");
-  }
-  if (Array.isArray(raw?.traits) && raw.traits.length > 0) {
-    return raw.traits.filter((item: unknown) => typeof item === "string");
-  }
-  return ["complex"];
 }
 
 function normalizeInitialMemories(

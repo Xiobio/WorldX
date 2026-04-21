@@ -65,5 +65,5 @@ export function resolveActionLabel(params: {
     }
   }
 
-  return ACTION_LABELS[actionId] ?? null;
+  return null;
 }

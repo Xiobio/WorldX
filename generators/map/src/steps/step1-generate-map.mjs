@@ -16,9 +16,10 @@ import {
  * @param {string} userPrompt
  * @param {object} worldDesign
  * @param {(name: string, data: any) => void} save - callback to persist intermediate artifacts
+ * @param {{ originalUserPrompt?: string }} options
  * @returns {{ buffer: Buffer, reviewPassed: boolean, attempts: number }}
  */
-export async function generateMap(userPrompt, worldDesign, save) {
+export async function generateMap(userPrompt, worldDesign, save, { originalUserPrompt = "" } = {}) {
   const MAX_RETRIES = parseInt(process.env.STEP1_MAX_RETRIES || process.env.MAX_RETRIES || "3", 10);
   const MAP_IMAGE_SIZE = getMapImageSizeLabel();
   const GENERATE_TIMEOUT_MS = parseInt(process.env.STEP1_GENERATE_TIMEOUT_MS || "180000", 10);
@@ -36,6 +37,7 @@ export async function generateMap(userPrompt, worldDesign, save) {
 
     const prompt = loadPrompt("step1-map-generation.md", {
       userPrompt,
+      originalUserPrompt: originalUserPrompt || "",
       mapPlanSummary,
       regionSummary,
       elementSummary,
@@ -56,6 +58,7 @@ export async function generateMap(userPrompt, worldDesign, save) {
 
     const reviewPrompt = loadPrompt("step1-map-review.md", {
       userPrompt,
+      originalUserPrompt: originalUserPrompt || "",
       mapPlanSummary,
       regionSummary,
       elementSummary,

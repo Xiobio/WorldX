@@ -32,7 +32,7 @@ async function main() {
   if (!userPrompt) {
     console.error('Usage: node orchestrator/src/index.mjs "描述你想创造的世界"');
     console.error(
-      'Example: node orchestrator/src/index.mjs "宋朝繁华夜市，有算命先生、卖艺人、小偷、女侠、书生、酒鬼"'
+      'Example: node orchestrator/src/index.mjs'
     );
     process.exit(1);
   }
@@ -68,12 +68,14 @@ async function main() {
       logsDir,
       mapScript,
       mapDescription: worldDesign.mapDescription,
+      originalPrompt: userPrompt,
     }),
     generateCharacterAssets({
       charsDir,
       charScript,
       characters: worldDesign.characters,
       worldDesign,
+      originalPrompt: userPrompt,
     }),
   ]);
   if (mapResult.status === "rejected") throw mapResult.reason;
@@ -107,7 +109,7 @@ async function main() {
   console.log();
 }
 
-async function generateMapAssets({ mapDir, worldDir, logsDir, mapScript, mapDescription }) {
+async function generateMapAssets({ mapDir, worldDir, logsDir, mapScript, mapDescription, originalPrompt }) {
   console.log("\n━━━ Phase 2: Generating Map ━━━");
 
   try {
@@ -117,6 +119,7 @@ async function generateMapAssets({ mapDir, worldDir, logsDir, mapScript, mapDesc
         MAP_LOG_DIR: logsDir,
         MAP_LOG_FILE_NAME: "map-pipeline.log",
         WORLD_DESIGN_PATH: join(worldDir, "world-design.json"),
+        ORIGINAL_USER_PROMPT: originalPrompt || "",
       },
       timeoutMs: MAP_GENERATION_TIMEOUT_MS,
       label: "Map generation",
@@ -138,13 +141,17 @@ async function generateMapAssets({ mapDir, worldDir, logsDir, mapScript, mapDesc
   }
 }
 
-async function generateCharacterAssets({ charsDir, charScript, characters, worldDesign }) {
+async function generateCharacterAssets({ charsDir, charScript, characters, worldDesign, originalPrompt }) {
   console.log("\n━━━ Phase 3: Generating Characters ━━━");
   const worldVisualContext = buildWorldVisualContext(worldDesign);
+
+  const ipSource = extractIpSource(worldDesign, originalPrompt);
 
   for (let i = 0; i < characters.length; i++) {
     const char = characters[i];
     console.log(`\nGenerating character ${i + 1}/${characters.length}: ${char.name}`);
+
+    const charIpSource = char.canonicalRefs?.source || ipSource;
 
     try {
       await runNodeScript(
@@ -157,6 +164,7 @@ async function generateCharacterAssets({ charsDir, charScript, characters, world
           typeof char.role === "string" ? char.role : "",
           "--world-visual-context",
           worldVisualContext,
+          ...(charIpSource ? ["--ip-source", charIpSource] : []),
         ],
         {
         env: {
@@ -216,6 +224,28 @@ function purgeFailedCharacters(charsDir, worldDesign) {
   if (worldDesign.characters.length === 0) {
     throw new Error("All character generations failed — no valid sprites found.");
   }
+}
+
+function extractIpSource(worldDesign, originalPrompt) {
+  for (const char of worldDesign.characters || []) {
+    if (char.canonicalRefs?.source) return char.canonicalRefs.source;
+  }
+  const text = `${originalPrompt || ""} ${worldDesign.worldName || ""} ${worldDesign.worldDescription || ""}`;
+  const ipPatterns = [
+    /赛博朋克\s*2077/,
+    /Cyberpunk\s*2077/i,
+    /进击的巨人|Attack on Titan/i,
+    /指环王|Lord of the Rings/i,
+    /哈利[·.]?波特|Harry Potter/i,
+    /星球大战|Star Wars/i,
+    /漫威|Marvel/i,
+    /原神|Genshin/i,
+  ];
+  for (const p of ipPatterns) {
+    const m = text.match(p);
+    if (m) return m[0];
+  }
+  return "";
 }
 
 function buildWorldVisualContext(worldDesign) {

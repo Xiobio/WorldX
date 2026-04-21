@@ -129,7 +129,6 @@
     "noData": "No data yet",
     "saved": "Saved",
     "saveFailed": "Failed: {{error}}",
-    "fieldCoreTraits": "Core traits (comma-separated)",
     "fieldCoreMotivation": "Core motivation",
     "fieldCoreValues": "Core values (comma-separated)",
     "fieldSpeakingStyle": "Speaking style",

@@ -82,7 +82,6 @@ export class PromptBuilder {
     const content = this.build("reactive-decision", {
       name: profile.name,
       role: profile.role,
-      coreTraits: profile.coreTraits.join("、"),
       speakingStyle: profile.speakingStyle,
       day: String(gameTime.day),
       timeString,
@@ -122,7 +121,6 @@ export class PromptBuilder {
     const content = this.build("dialogue", {
       nameA: a.profile.name,
       roleA: a.profile.role,
-      traitsA: a.profile.coreTraits.join("、"),
       styleA: a.profile.speakingStyle,
       emotionA: getEmotionLabelSimple(
         a.state.emotionValence,
@@ -133,7 +131,6 @@ export class PromptBuilder {
 
       nameB: b.profile.name,
       roleB: b.profile.role,
-      traitsB: b.profile.coreTraits.join("、"),
       styleB: b.profile.speakingStyle,
       emotionB: getEmotionLabelSimple(
         b.state.emotionValence,
@@ -181,7 +178,6 @@ export class PromptBuilder {
       nameA: a.profile.name,
       idA: a.profile.id,
       roleA: a.profile.role,
-      traitsA: a.profile.coreTraits.join("、"),
       styleA: a.profile.speakingStyle,
       emotionA: getEmotionLabelSimple(
         a.state.emotionValence,
@@ -194,7 +190,6 @@ export class PromptBuilder {
       nameB: b.profile.name,
       idB: b.profile.id,
       roleB: b.profile.role,
-      traitsB: b.profile.coreTraits.join("、"),
       styleB: b.profile.speakingStyle,
       emotionB: getEmotionLabelSimple(
         b.state.emotionValence,
@@ -265,7 +260,6 @@ export class PromptBuilder {
     const content = this.build("diary", {
       name: profile.name,
       role: profile.role,
-      coreTraits: profile.coreTraits.join("、"),
       speakingStyle: profile.speakingStyle,
       day: String(gameDay),
       todayMemories: params.todayMemories || "（今天没什么特别的事）",
@@ -321,7 +315,6 @@ export class PromptBuilder {
     const content = this.build("sandbox-chat", {
       name: profile.name,
       role: profile.role,
-      coreTraits: profile.coreTraits.join("、"),
       speakingStyle: profile.speakingStyle,
       coreMotivation: profile.coreMotivation,
       emotionLabel,
@@ -347,7 +340,6 @@ export class PromptBuilder {
     const content = this.build("micro-reflection", {
       name: profile.name,
       role: profile.role,
-      coreTraits: profile.coreTraits.join("、"),
       day: String(gameDay),
       timeString: params.timeString || "此刻",
       currentFocus: params.currentFocus || "（此刻没有特别明确的牵挂）",
@@ -367,7 +359,6 @@ export class PromptBuilder {
     const content = this.build("reflection", {
       name: profile.name,
       role: profile.role,
-      coreTraits: profile.coreTraits.join("、"),
       day: String(gameDay),
       recentMemories: params.recentMemories || "（今天没什么特别的事）",
     });

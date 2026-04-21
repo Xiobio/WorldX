@@ -106,10 +106,9 @@ export function generateConfigs(worldDesign, worldDir, options = {}) {
   const characterConfigs = normalizedDesign.characters.map((charDesign, i) => {
     const genChar = generatedChars[i];
     const charId = genChar?.id || `char_${i + 1}`;
-    let startPos = startPositions[i] || startPositions[0];
 
-    // Resolve anchored character start position
     const anchor = charDesign.anchor || undefined;
+    let startPos = "main_area";
     if (anchor) {
       const anchoredPos = resolveAnchoredStartPosition(
         anchor,
@@ -150,7 +149,6 @@ export function generateConfigs(worldDesign, worldDir, options = {}) {
         typeof charDesign.appearanceHint === "string" ? charDesign.appearanceHint : "",
       motivation: charDesign.motivation,
       socialStyle: charDesign.socialStyle,
-      traits: extractTraits(charDesign.personality),
       startPosition: startPos,
       initialMemories: [...backgroundMemories, ...signatureMemories],
     };
@@ -667,33 +665,6 @@ function findNearestWalkableTileOutsideBox(cx, cy, box, collisionData, gridWidth
     }
   }
   return null;
-}
-
-function extractTraits(personality) {
-  const traits = [];
-  const lower = (personality || "").toLowerCase();
-  const traitKeywords = [
-    "curious",
-    "friendly",
-    "reserved",
-    "ambitious",
-    "creative",
-    "analytical",
-    "empathetic",
-    "stubborn",
-    "adventurous",
-    "cautious",
-    "optimistic",
-    "pessimistic",
-    "honest",
-    "mysterious",
-    "loyal",
-  ];
-  traitKeywords.forEach((t) => {
-    if (lower.includes(t)) traits.push(t);
-  });
-  if (traits.length === 0) traits.push("complex");
-  return traits;
 }
 
 function toStringArray(value) {

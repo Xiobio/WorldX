@@ -102,7 +102,6 @@ export function CharacterDetail({
 
   const openEditor = () => {
     setEditDraft({
-      coreTraits: (profile.coreTraits ?? []).join("、"),
       coreMotivation: profile.coreMotivation ?? "",
       coreValues: ((profile.coreValues as string[]) ?? []).join("、"),
       speakingStyle: profile.speakingStyle ?? "",
@@ -118,7 +117,6 @@ export function CharacterDetail({
     try {
       const split = (s: string) => s.split(/[,、，\s]+/).map((t) => t.trim()).filter(Boolean);
       await apiClient.patchCharacterProfile(charId, {
-        coreTraits: split(editDraft.coreTraits ?? ""),
         coreMotivation: editDraft.coreMotivation?.trim() || undefined,
         coreValues: split(editDraft.coreValues ?? ""),
         speakingStyle: editDraft.speakingStyle?.trim() || undefined,
@@ -160,6 +158,14 @@ export function CharacterDetail({
         </button>
         <button onClick={openEditor} style={editBtnStyle}>{t("charDetail.editProfile")}</button>
       </div>
+
+      {(profile.role || profile.coreMotivation) && (
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.55)", marginBottom: 4, lineHeight: 1.55, flexShrink: 0 }}>
+          {profile.role && <span style={{ color: "rgba(255,255,255,0.7)", fontWeight: 600 }}>{profile.role}</span>}
+          {profile.role && profile.coreMotivation && <span style={{ margin: "0 5px", opacity: 0.4 }}>·</span>}
+          {profile.coreMotivation && <span>{profile.coreMotivation}</span>}
+        </div>
+      )}
 
       <div style={{ fontSize: 11, color: "#aaa", marginBottom: 8, lineHeight: 1.6, flexShrink: 0 }}>
         <div>
@@ -420,7 +426,6 @@ function typeColor(type: string): string {
 /* ── Profile Editor ── */
 
 const PROFILE_FIELD_KEYS: { key: string; labelKey: string; multiline?: boolean }[] = [
-  { key: "coreTraits", labelKey: "charDetail.fieldCoreTraits" },
   { key: "coreMotivation", labelKey: "charDetail.fieldCoreMotivation" },
   { key: "coreValues", labelKey: "charDetail.fieldCoreValues" },
   { key: "speakingStyle", labelKey: "charDetail.fieldSpeakingStyle" },

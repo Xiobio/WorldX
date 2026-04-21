@@ -591,8 +591,7 @@ export class CharacterSprite extends Phaser.GameObjects.Container {
 
   private updateDomLabelVisibility(): void {
     if (!this.labelRoot) return;
-    const hideName = this.dialogueBubbleVisible || this.osBubbleContainer?.visible;
-    this.labelRoot.style.visibility = hideName ? "hidden" : "visible";
+    this.labelRoot.style.visibility = "visible";
   }
 
   private updateDialogueBubbleStyle(): void {

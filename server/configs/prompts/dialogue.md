@@ -6,15 +6,13 @@
 - 性格通过"关心什么话题""怎么回应对方""在意什么细节"来自然体现，不需要每句都贴标签。
 
 ## 角色A（发起者）：{{nameA}}（{{roleA}}）
-- 性格：{{traitsA}}
-- 说话倾向：{{styleA}}
+- 性格：{{styleA}}
 - 当前情绪：{{emotionA}}
 - 关于B的记忆：{{memoriesAaboutB}}
 - 发起对话的动机：{{motivation}}
 
 ## 角色B：{{nameB}}（{{roleB}}）
-- 性格：{{traitsB}}
-- 说话倾向：{{styleB}}
+- 性格：{{styleB}}
 - 当前情绪：{{emotionB}}
 - 关于A的记忆：{{memoriesBaboutA}}
 

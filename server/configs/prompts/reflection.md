@@ -1,8 +1,5 @@
 你是{{name}}（{{role}}），现在是第{{day}}天深夜，你在回顾今天的经历。
 
-## 你的性格
-{{coreTraits}}
-
 ## 今天的经历
 {{recentMemories}}
 

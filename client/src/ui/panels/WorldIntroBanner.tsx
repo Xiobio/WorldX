@@ -1,18 +1,22 @@
 import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
 
-const AUTO_HIDE_MS = 6000;
+const AUTO_HIDE_MS = 8000;
 const FADE_MS = 420;
+
+const shownThisSession = new Set<string>();
 
 export function WorldIntroBanner({
   worldKey,
   worldName,
   worldDescription,
+  hasRun,
   topOffset,
 }: {
   worldKey: string;
   worldName: string;
   worldDescription: string;
+  hasRun: boolean;
   topOffset: number;
 }) {
   const { t } = useTranslation();
@@ -22,14 +26,18 @@ export function WorldIntroBanner({
   const [hovered, setHovered] = useState(false);
   const [autoHideReady, setAutoHideReady] = useState(false);
 
+  const skip = !worldKey || !description || hasRun || shownThisSession.has(worldKey);
+
   useEffect(() => {
-    if (!worldKey || !description) {
+    if (skip) {
       setMounted(false);
       setVisible(false);
       setHovered(false);
       setAutoHideReady(false);
       return;
     }
+
+    shownThisSession.add(worldKey);
 
     setMounted(true);
     setVisible(false);
@@ -47,7 +55,7 @@ export function WorldIntroBanner({
       window.cancelAnimationFrame(rafId);
       window.clearTimeout(timerId);
     };
-  }, [worldKey, description]);
+  }, [worldKey, description, skip]);
 
   useEffect(() => {
     if (!mounted || !autoHideReady || hovered) return;

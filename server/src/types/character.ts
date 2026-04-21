@@ -17,7 +17,6 @@ export interface CharacterProfile {
   backstory?: string;
   appearanceHint?: string;
 
-  coreTraits: string[];
   coreMotivation: string;
   coreValues: string[];
   speakingStyle: string;

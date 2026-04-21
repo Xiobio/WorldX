@@ -47,7 +47,6 @@ export interface CharacterProfile {
   nickname: string;
   backstory?: string;
   appearanceHint?: string;
-  coreTraits: string[];
   coreMotivation: string;
   coreValues: string[];
   speakingStyle: string;

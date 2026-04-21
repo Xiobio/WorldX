@@ -63,10 +63,12 @@ async function main() {
         mapPlan: {},
       });
 
+  const originalUserPrompt = process.env.ORIGINAL_USER_PROMPT || "";
+
   try {
     // ── Step 1: Generate Map ──
     console.log(`\n═══ Step 1: Generate ${MAP_IMAGE_SIZE} Map ═══`);
-    const step1 = await generateMap(userPrompt, worldDesign, save);
+    const step1 = await generateMap(userPrompt, worldDesign, save, { originalUserPrompt });
     const originalMap = step1.buffer;
     save("01-original-map.png", originalMap);
     const origSize = await getImageSize(originalMap);
