@@ -57,7 +57,7 @@ git clone https://github.com/YGYOOO/WorldX.git
 cd WorldX
 cp .env.example .env
 # Edit .env — fill in SIMULATION_* fields only
-npm install && cd client && npm install && cd ../server && npm install && cd ..
+npm install && cd client && npm install && cd ../server && npm install && cd ../generators && npm install && cd ..
 npm run dev
 ```
 
