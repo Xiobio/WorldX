@@ -350,7 +350,7 @@ export class WorldScene extends Phaser.Scene {
     sprite.profileAnchor = char.anchor || null;
     sprite.setCurrentAction(char.currentAction);
     sprite.setActionIcon(actionToEmoji(char.currentAction));
-    sprite.setActionLabel(char.currentActionLabel || null);
+    sprite.setActionLabel(null);
     sprite.setMovementAnchor({
       x: pos.x,
       y: pos.y,

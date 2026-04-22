@@ -143,7 +143,6 @@ export function DialoguePanel({
     const nameB = characterNames[b] || b;
     return `${nameA} & ${nameB}`;
   };
-  return null
 
   return (
     <div

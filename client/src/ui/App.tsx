@@ -383,6 +383,8 @@ function AppContent({ eventBus }: { eventBus: Phaser.Events.EventEmitter }) {
   if (isCreateRoute) {
     return (
       <div style={{ width: "100%", height: "100%", pointerEvents: "auto" }}>
+        {backgroundRoot &&
+          createPortal(<CreateWorldBackground intensity="calm" />, backgroundRoot)}
         <CreateWorldPage hasExistingWorlds={hasUserWorlds} />
       </div>
     );

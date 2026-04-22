@@ -23,8 +23,9 @@ type Mode = "input" | "running" | "done" | "error";
 
 const PROMPT_EXAMPLES = [
   "末日超市：世界末日后，仅存的 6 个幸存者挤在一个封闭的超市里。有公司高管、下岗程序员、大学教授、宅男、退休军人和一个小学生",
-  "A cozy mountain village in autumn, with a blacksmith, a tea house owner, a wandering monk and a curious child.",
+  "Doomsday Supermarket: 6 survivors are trapped in a sealed supermarket — a corporate executive, a laid-off programmer, a college professor, a shut-in, a retired soldier, and an elementary school kid.",
   "5个反派被关在了一个无法逃脱的监狱里：容嬷嬷、伏地魔（强大力量被封印）、灭霸（强大力量被封印）、弗利沙（强大力量被封印）、夜神月（死亡笔记丢了）",
+  "A cozy mountain village in autumn, with a blacksmith, a tea house owner, a wandering monk and a curious child.",
 ];
 
 export function CreateWorldPage({
@@ -684,7 +685,7 @@ function truncate(input: string, max: number): string {
 const pageStyle: CSSProperties = {
   position: "fixed",
   inset: 0,
-  background: "#070819",
+  background: "transparent",
   color: "#e8ecff",
   fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
   overflow: "auto",

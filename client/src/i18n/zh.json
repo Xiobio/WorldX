@@ -181,7 +181,7 @@
     "sending": "发送中...",
     "broadcast": "向世界广播",
     "disasterCards": "灾难卡",
-    "broadcastSuccess": "已广播给 {{count}} 位角色，将在下一个 tick 生效",
+    "broadcastSuccess": "已广播给 {{count}} 位角色，将在不久后生效",
     "emptyContent": "内容不能为空",
     "whisperTarget": "耳语给谁",
     "whisperContentLabel": "内容（以「你」为主语，对角色说话）",

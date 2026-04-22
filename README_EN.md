@@ -1,23 +1,22 @@
 <p align="center">
-  <h1 align="center">WorldX</h1>
-  <p align="center"><strong>One Sentence, One World.</strong></p>
-  <p align="center">
-    Type a single sentence. Watch an entire AI world come to life — unique maps, autonomous characters, emergent stories.
-  </p>
+  <img src="docs/logo.png" alt="WorldX logo: pixel-art infinity symbol transitioning from nature to digital grid" width="200" />
+</p>
+
+<p align="center">
+  <!-- <h1 align="center">WorldX</h1> -->
+  <p align="center"><strong>One sentence, One living world.</strong></p>
 </p>
 
 <p align="center">
   English | <a href="./README.md">中文</a>
 </p>
 
-<!-- TODO: Add hero screenshot/video here -->
-<!-- <p align="center"><img src="docs/hero.png" width="720" /></p> -->
 
 ---
 
 **WorldX** turns a single text prompt into a fully autonomous AI world. The system designs the world, generates original maps and character art, then runs a living simulation where AI agents make decisions, form relationships, have conversations, and create emergent narratives — all without human intervention.
 
-> "A Song Dynasty night market with fortune tellers and wandering poets"
+> "A cozy autumn mountain village with a blacksmith, a tavern owner, a wandering monk, and a curious child"
 
 That's all it takes. WorldX handles the rest.
 
@@ -28,33 +27,19 @@ That's all it takes. WorldX handles the rest.
 - **Autonomous agent simulation** — characters make decisions, form relationships, hold conversations
 - **Memory & personality** — agents remember past events and act according to distinct personalities
 - **Multi-day evolution** — worlds evolve across day/night cycles with scene transitions
-- **God mode** — broadcast events, whisper memories, edit character profiles at runtime
+- **God mode** — broadcast events, edit character profiles/memories, run sandbox chats with characters, and observe emergent developments
 - **Timeline system** — branch, replay, and compare different simulation runs
 - **Bilingual UI** — Chinese / English interface with one-click switching
 
-## Architecture
+<table>
+<tr>
+<td align="center" valign="top" width="50%"><img src="docs/screenshot1_en.png" alt="WorldX: one-sentence world creation interface" width="400"/></td>
+<td align="center" valign="top" width="50%"><img src="docs/screenshot2_en.png" alt="WorldX: pixel world simulation with character dialogue sidebar" width="400"/></td>
+</tr>
+</table>
+<br>   
 
-```
- "A cozy mountain village with a mysterious blacksmith"
-                         │
-                         ▼
-              ┌─────────────────────┐
-              │   Orchestrator      │  LLM designs world, characters, rules
-              └──────────┬──────────┘
-                    ┌────┴────┐
-                    ▼         ▼
-              Map Gen    Character Gen    AI-generated art pipelines
-                    │         │
-                    └────┬────┘
-                         ▼
-              ┌─────────────────────┐
-              │  Simulation Server  │  Decisions, dialogue, memory, relationships
-              └──────────┬──────────┘
-                         ▼
-              ┌─────────────────────┐
-              │    Game Client      │  Phaser + React — watch AI lives unfold
-              └─────────────────────┘
-```
+> 🚧 The project is currently in Alpha — core features work, ongoing improvements ahead
 
 ## Quick Start
 
@@ -101,7 +86,7 @@ WorldX uses **4 model roles**, each configurable independently. All use the Open
 
 | Role | Env Prefix | What It Does | Recommended |
 |------|-----------|-------------|-------------|
-| **Orchestrator** | `ORCHESTRATOR_` | Designs world structure, characters, rules | Strong reasoning model (e.g. `gemini-2.5-pro`) |
+| **Orchestrator** | `ORCHESTRATOR_` | Designs world structure, characters, rules | Strong reasoning model (e.g. `gemini-3.1-pro-preview`) |
 | **Image Gen** | `IMAGE_GEN_` | Generates map art and character sprites | Image-capable model (e.g. `gemini-3.1-flash-image-preview`) |
 | **Vision** | `VISION_` | Reviews map quality, locates regions/elements | Strong multimodal model (e.g. `gemini-3.1-pro-preview`) |
 | **Simulation** | `SIMULATION_` | Drives runtime character behavior | Any model — cheaper is fine (e.g. `gemini-2.5-flash`) |
@@ -111,7 +96,7 @@ Each role needs 3 env vars:
 ```env
 {ROLE}_BASE_URL=https://openrouter.ai/api/v1    # API base URL
 {ROLE}_API_KEY=sk-or-v1-xxxx                     # API key
-{ROLE}_MODEL=google/gemini-2.5-pro-preview       # Model identifier
+{ROLE}_MODEL=google/gemini-3.1-pro-preview       # Model identifier
 ```
 
 ### Platform Examples
@@ -124,7 +109,7 @@ Get a key at [openrouter.ai](https://openrouter.ai):
 ```env
 ORCHESTRATOR_BASE_URL=https://openrouter.ai/api/v1
 ORCHESTRATOR_API_KEY=sk-or-v1-xxxx
-ORCHESTRATOR_MODEL=google/gemini-2.5-pro-preview
+ORCHESTRATOR_MODEL=google/gemini-3.1-pro-preview
 
 IMAGE_GEN_BASE_URL=https://openrouter.ai/api/v1
 IMAGE_GEN_API_KEY=sk-or-v1-xxxx
@@ -149,7 +134,7 @@ Get a key at [aistudio.google.com](https://aistudio.google.com/apikey):
 ```env
 ORCHESTRATOR_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 ORCHESTRATOR_API_KEY=AIzaSy...
-ORCHESTRATOR_MODEL=gemini-2.5-pro-preview
+ORCHESTRATOR_MODEL=gemini-3.1-pro-preview
 
 IMAGE_GEN_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 IMAGE_GEN_API_KEY=AIzaSy...
@@ -175,7 +160,7 @@ You can use a different platform for each role. For example, Google AI Studio fo
 # World design — Google AI Studio
 ORCHESTRATOR_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
 ORCHESTRATOR_API_KEY=AIzaSy...
-ORCHESTRATOR_MODEL=gemini-2.5-pro-preview
+ORCHESTRATOR_MODEL=gemini-3.1-pro-preview
 
 # Art generation — Google AI Studio
 IMAGE_GEN_BASE_URL=https://generativelanguage.googleapis.com/v1beta/openai
@@ -195,19 +180,8 @@ SIMULATION_MODEL=deepseek-chat
 
 </details>
 
-## Controls
-
-Once a world is running:
-
-| Control | Description |
-|---------|-------------|
-| **Run / Replay** | Toggle between live simulation and recorded playback |
-| **Play / Pause** | Start or pause the simulation |
-| **Relations** | View the relationship graph between characters |
-| **Event Log** | Browse the timeline of all events |
-| **God Panel** | Broadcast events, whisper to characters, edit profiles |
-| **Sandbox Chat** | Have a private conversation with any character |
-| **New Timeline** | Branch a fresh simulation from the same world |
+## Architecture
+<img src="docs/chart1_en.png"/>
 
 ## Project Structure
 
@@ -273,7 +247,6 @@ npm run create       # Generate a new world via CLI
 
 - Client: `http://localhost:3200`
 - Server: `http://localhost:3100`
-- Dev overlays: append `?dev=1` to the client URL
 
 ## License
 

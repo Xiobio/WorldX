@@ -5,6 +5,9 @@ import { CharacterSprite } from "../objects/CharacterSprite";
 
 const LOCAL_WANDER_RADIUS_TILES = 4;
 const ANCHORED_ELEMENT_WANDER_RADIUS_TILES = 2;
+const FADE_TRANSPORT_SCAN_TILES = 30;
+const FADE_TRANSPORT_WALK_RATIO = 2 / 3;
+const FADE_MS = 300;
 const DIALOGUE_FACE_TO_FACE_HEIGHT_RATIO = 0.74;
 const DIALOGUE_APPROACH_SEARCH_PADDING_TILES = 8;
 const DIALOGUE_APPROACH_MAX_CANDIDATES = 24;
@@ -42,19 +45,7 @@ export class CharacterMovement {
     if (!target) return;
 
     const path = await this.pathfinder.findPath(sprite.x, sprite.y, target.x, target.y);
-    if (path && path.length > 0) {
-      await this.walkSprite(sprite, path, () => {
-        sprite.currentLocationId = locationId;
-        sprite.mainAreaPointId = null;
-        sprite.setMovementAnchor({
-          x: target.x,
-          y: target.y,
-          pinned: this.mapManager.isPinnedLocation(locationId),
-        });
-        this.ambientMoveCooldownUntil.set(charId, performance.now() + this.randomAmbientDelay());
-      });
-    } else {
-      sprite.setPosition(target.x, target.y);
+    const onArrive = () => {
       sprite.currentLocationId = locationId;
       sprite.mainAreaPointId = null;
       sprite.setMovementAnchor({
@@ -63,6 +54,11 @@ export class CharacterMovement {
         pinned: this.mapManager.isPinnedLocation(locationId),
       });
       this.ambientMoveCooldownUntil.set(charId, performance.now() + this.randomAmbientDelay());
+    };
+    if (path && path.length > 0) {
+      await this.walkSprite(sprite, path, onArrive);
+    } else {
+      await this.fadeTransport(sprite, target, onArrive);
     }
   }
 
@@ -98,8 +94,7 @@ export class CharacterMovement {
     if (path && path.length > 0) {
       await this.walkSprite(sprite, path, onArrive);
     } else {
-      sprite.setPosition(target.x, target.y);
-      onArrive();
+      await this.fadeTransport(sprite, target, onArrive);
     }
   }
 
@@ -446,6 +441,67 @@ export class CharacterMovement {
       sprite.walkAlongPath(path, () => {
         onComplete?.();
         resolve();
+      });
+    });
+  }
+
+  private async fadeTransport(
+    sprite: CharacterSprite,
+    target: { x: number; y: number },
+    onArrive?: () => void,
+  ): Promise<void> {
+    const dx = target.x - sprite.x;
+    const dy = target.y - sprite.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 1) {
+      sprite.setPosition(target.x, target.y);
+      onArrive?.();
+      return;
+    }
+
+    const nx = dx / dist;
+    const ny = dy / dist;
+    const from = this.mapManager.pixelToGrid(sprite.x, sprite.y);
+    let maxReachable = 0;
+    for (let i = 1; i <= FADE_TRANSPORT_SCAN_TILES; i++) {
+      const gx = from.gx + Math.round(nx * i);
+      const gy = from.gy + Math.round(ny * i);
+      if (!this.mapManager.isWalkable(gx, gy)) break;
+      maxReachable = i;
+    }
+
+    const walkTiles = Math.floor(maxReachable * FADE_TRANSPORT_WALK_RATIO);
+    if (walkTiles >= 2) {
+      const walkGrid = {
+        gx: from.gx + Math.round(nx * walkTiles),
+        gy: from.gy + Math.round(ny * walkTiles),
+      };
+      const walkTarget = this.mapManager.gridToPixel(walkGrid.gx, walkGrid.gy);
+      const walkPath = await this.pathfinder.findPath(sprite.x, sprite.y, walkTarget.x, walkTarget.y);
+      if (walkPath && walkPath.length > 0) {
+        await this.walkSprite(sprite, walkPath);
+      }
+    }
+
+    const scene = sprite.scene;
+    await new Promise<void>((resolve) => {
+      scene.tweens.add({
+        targets: sprite,
+        alpha: 0,
+        duration: FADE_MS,
+        onComplete: () => resolve(),
+      });
+    });
+
+    sprite.setPosition(target.x, target.y);
+    onArrive?.();
+
+    await new Promise<void>((resolve) => {
+      scene.tweens.add({
+        targets: sprite,
+        alpha: 1,
+        duration: FADE_MS,
+        onComplete: () => resolve(),
       });
     });
   }
