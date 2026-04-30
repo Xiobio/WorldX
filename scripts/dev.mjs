@@ -13,7 +13,7 @@ function run(name, cmd, args, cwd) {
   const proc = spawn(cmd, args, {
     cwd,
     stdio: ["ignore", "pipe", "pipe"],
-    shell: false,
+    shell: process.platform === "win32",
     detached: process.platform !== "win32",
   });
   proc.stdout.on("data", (d) =>
