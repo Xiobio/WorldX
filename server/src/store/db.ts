@@ -59,6 +59,7 @@ CREATE TABLE IF NOT EXISTS character_states (
   emotion_arousal REAL DEFAULT 3,
   curiosity REAL DEFAULT 100,
   daily_plan TEXT,
+  inventory TEXT DEFAULT '[]',
   updated_at TEXT DEFAULT (datetime('now'))
 );
 
@@ -156,6 +157,14 @@ function runMigrations(database: Database.Database): void {
     .some((col: any) => col.name === "main_area_point_id");
   if (!hasMainAreaPointId) {
     database.exec(`ALTER TABLE character_states ADD COLUMN main_area_point_id TEXT DEFAULT NULL`);
+  }
+
+  const hasInventory = database
+    .prepare(`PRAGMA table_info(character_states)`)
+    .all()
+    .some((col: any) => col.name === "inventory");
+  if (!hasInventory) {
+    database.exec(`ALTER TABLE character_states ADD COLUMN inventory TEXT DEFAULT '[]'`);
   }
 }
 

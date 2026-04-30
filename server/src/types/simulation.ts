@@ -105,14 +105,24 @@ export interface Perception {
     locationId?: string;
     locationName?: string;
     zone?: string;
+    carriedItems?: { name: string; description: string }[];
   }[];
+  myInventory?: { id: string; name: string; description: string }[];
   recentEnvironmentChanges: string[];
   recentActions: string[];
 }
 
 /** AI 决策输出 */
 export interface ActionDecision {
-  actionType: "interact_object" | "world_action" | "talk_to" | "move_to" | "move_within_main_area" | "idle";
+  actionType:
+    | "interact_object"
+    | "world_action"
+    | "talk_to"
+    | "move_to"
+    | "move_within_main_area"
+    | "give_item"
+    | "pick_up"
+    | "idle";
   targetId: string;
   interactionId?: string;
   reason: string;

@@ -44,6 +44,9 @@ export interface CharacterProfile {
     | "decayFactor"
   >[];
 
+  /** 角色起始携带物品 */
+  initialInventory?: Omit<InventoryItem, "id" | "acquiredDay" | "acquiredTick" | "fromCharId">[];
+
   /** 锚定：限制角色必须待在某个区域或可交互元素附近 */
   anchor?: CharacterAnchor;
 
@@ -69,6 +72,18 @@ export interface CanonicalRefs {
   signatureMoments: string[];
 }
 
+/** 携带物品 */
+export interface InventoryItem {
+  id: string;
+  name: string;
+  description: string;
+  fromLocation?: string;
+  fromCharId?: string;
+  tags?: string[];
+  acquiredDay?: number;
+  acquiredTick?: number;
+}
+
 /** 角色运行时状态（存 DB，易变层） */
 export interface CharacterState {
   characterId: string;
@@ -85,6 +100,8 @@ export interface CharacterState {
   curiosity: number;
 
   dailyPlan: string | null;
+
+  inventory: InventoryItem[];
 }
 
 /** 记忆条目 */

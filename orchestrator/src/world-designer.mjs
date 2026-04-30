@@ -55,9 +55,9 @@ export async function designWorld(userPrompt) {
     );
   }
 
-  if (locationLikeCount > 8) {
+  if (locationLikeCount > 12) {
     throw new Error(
-      `无法生成该世界：可行走区域与可交互元素总数超出上限（${locationLikeCount}/8）。请减少功能区或可交互元素数量后重试。`,
+      `无法生成该世界：可行走区域与可交互元素总数超出上限（${locationLikeCount}/12）。请减少功能区或可交互元素数量后重试。`,
     );
   }
 

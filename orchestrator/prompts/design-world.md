@@ -26,13 +26,13 @@
   - `compositionNotes`（字符串）：一句话，概述地图俯视平面构图要点（如"左侧建筑群、中间街道、右侧广场"）
   - `worldFunctionSummary`（字符串）：一句话，概述整个场景的全局功能
   - `regionDesignNotes`（字符串）：一句话，概述各区域的平面位置关系与连通方式
-- `worldActions`（数组）：1–6 项。这些是全场景通用的动作，在任意位置均可使用。每个世界至少包含一个有意义的全局动作（closed场景必须有“睡觉”相关的动作）。每项包含：
+- `worldActions`（数组）：**6–12 项**。这些是全场景通用的动作，在任意位置均可使用。每个世界至少包含一个有意义的全局动作（closed场景必须有“睡觉”相关的动作）。**追求多样性**：建议混合"独处类（独自沉思、巡视）"、"对人类（敬礼、寒暄、挑衅）"、"环境类（侧耳倾听、观察天色）"。每项包含：
   - `id`（snake_case，英文）
   - `name`（语言与用户输入一致）
   - `description`（语言与用户输入一致）
   - `duration`（数字）
   - `effects`（对象数组，如 `{ "type": "character_need", "need": "curiosity", "delta": 10 }` 或 `{ "type": "world_state", "target": "crowd_heat", "value": "higher" }`）
-- `regions`（数组）：0–8 项（与 `interactiveElements` 合计不超过 8 项）。这些是可选的功能区域——角色可以进入并在其中行走的空间（室内房间、广场、花园等）。仅在空间划分确实有助于行为、导航时才添加区域。每项包含：
+- `regions`（数组）：**3–6 项**（与 `interactiveElements` 合计不超过 12 项）。这些是可选的功能区域——角色可以进入并在其中行走的空间（室内房间、广场、花园等）。仅在空间划分确实有助于行为、导航时才添加区域。每项包含：
   - `id`（snake_case，英文）
   - `name`（语言与用户输入一致）
   - `description`（一句话，语言与用户输入一致，概述该区域的功能/氛围）
@@ -42,16 +42,19 @@
   - `placementHint`（2–4 个词的位置描述，如"左侧"、"南端"、"中央广场旁"）
   - `visualDescription`（≤15 字，描述该区域**从正上方俯视**时的外观特征，不要描述立面/高度/3D 特征）
   - `expectedObjects`（字符串数组）
-  - `interactions`（对象数组，包含 `id`、`name`、`description`、`duration`、`effects`，以及可选的 `requiresAnchor`）
-- `interactiveElements`（数组）：0–8 项（与 `regions` 合计不超过 8 项）。这些是 main_area 中的可交互元素——如摊位、喷泉、贩售机、神龛等，角色走到附近进行交互，但不进入内部。不要将可交互元素放在功能区内。每项包含：
+  - `interactions`（**3–5 项**，对象数组，包含 `id`、`name`、`description`、`duration`、`effects`，以及可选的 `requiresAnchor`、`stateChange`、`stateChangeDescription`、`availableWhenState`）
+- `interactiveElements`（数组）：**6–10 项**（与 `regions` 合计不超过 12 项）。这些是 main_area 中的可交互元素——如摊位、喷泉、贩售机、神龛、留言板、铁砧、酒桶等，角色走到附近进行交互，但不进入内部。不要将可交互元素放在功能区内。**追求密度**：让主区域显得"有事可做"——一张大地图至少要有 6 个能戳能玩的东西。每项包含：
   - `id`（snake_case，英文）
   - `name`（语言与用户输入一致）
   - `description`（一句话，语言与用户输入一致，概述该元素的功能）
   - `visualDescription`（≤15 字，描述该元素**从正上方俯视**时的外观特征）
   - `placementHint`（2–4 个词的位置描述）
-  - `interactions`（对象数组，包含 `id`、`name`、`description`、`duration`、`effects`，以及可选的 `requiresAnchor`）
-- `characters`（数组）：1–8 项。每项包含：`name`、`role`、`personality`、`appearance`（语言与用户输入一致，描述视觉外观：身份/职业关键词 + 发型、服装、配饰、颜色。**必须包含用户原文中的身份关键词**，如用户说"捕快"则 appearance 中必须出现"捕快"）、`appearanceHint`（一句话，供**其他角色看到 ta 时**使用的外貌弱提示；只写旁观者一眼能注意到的外观印象，不要直接泄露身份真相、现代概念、剧情设定或标签判断。例如不要写"现代网红"，应写"衣着样式和镇上人格格不入，打扮很新奇"）、`motivation`、`socialStyle`、`initialMemories`（字符串数组）。可选填 `anchor`（见下方"角色锚定"规则）。当且仅当用户明确提到了知名 IP 角色时，才可选填 `iconicCues` 和 `canonicalRefs`（详见下方"角色鲜活度"规则）。
+  - `interactions`（**2–5 项**，对象数组，包含 `id`、`name`、`description`、`duration`、`effects`，以及可选的 `requiresAnchor`、`stateChange`、`stateChangeDescription`、`availableWhenState`）
+  - `pickupable`（可选布尔值，**默认 false**）：当该元素是"可被某人带走的小物件"时为 true（例如"桌上一封信"、"地上半截铁链"、"被遗忘的护身符"）。pickupable 元素的 `interactions` 通常为空数组，而是依赖运行时自动生成的"拾起"动作；它被拾起后会从场景消失
+  - `pickupDescription`（可选字符串）：被拾起后在角色背包中显示的简短描述，如"一封蜡封信"、"半截染血的红绸"
+- `characters`（数组）：1–8 项。每项包含：`name`、`role`、`personality`、`appearance`（语言与用户输入一致，描述视觉外观：身份/职业关键词 + 发型、服装、配饰、颜色。**必须包含用户原文中的身份关键词**，如用户说"捕快"则 appearance 中必须出现"捕快"）、`appearanceHint`（一句话，供**其他角色看到 ta 时**使用的外貌弱提示；只写旁观者一眼能注意到的外观印象，不要直接泄露身份真相、现代概念、剧情设定或标签判断。例如不要写"现代网红"，应写"衣着样式和镇上人格格不入，打扮很新奇"）、`motivation`、`socialStyle`、`initialMemories`（字符串数组）。可选填 `anchor`（见下方"角色锚定"规则）、`initialInventory`（见下方"角色物品"规则）。当且仅当用户明确提到了知名 IP 角色时，才可选填 `iconicCues` 和 `canonicalRefs`（详见下方"角色鲜活度"规则）。
   - `anchor`（可选对象）：`{ "type": "region" | "element", "targetId": "对应的 region 或 interactiveElement 的 id" }`。省略则为自由行走角色
+  - `initialInventory`（可选数组）：角色起始时随身携带的物品，每项 `{ "name": "物品名（中文）", "description": "一句话描述用途/来历", "tags": ["可选标签数组"] }`。**至少一半的角色应该有 1-3 件起始物品**，让角色之间产生有意义的物质交换（赠礼、托付、贿赂、归还）。物品要呼应角色身份：捕快带"通缉令副本"、走私商带"小瓶私酒"、学者带"残缺的笔记"。**物品要"有戏"**——不要给"水壶""面包"这种零意义补给品，给"父亲遗物的怀表"、"半张未寄出的信"、"刻有徽章的旧硬币"这类**触发对话/记忆/猜疑**的小物
   - `iconicCues`（可选对象）：`speechQuirks`（字符串数组——结构性说话习惯，不是口头禅；如"总以试探性反问回应别人，以此让对方先亮出底牌"）、`catchphrases`（数组，最多 2 条标志性台词）、`behavioralTics`（字符串数组——可反复出现的小动作/行为习惯）
   - `canonicalRefs`（可选对象）：`source`（原作 IP 名称）、`keyRelationships`（字符串数组——原作中对该角色最重要的人及关系）、`signatureMoments`（1–2 条字符串——定义该角色的关键时刻，作为其"心结"或执念，用作触发器而非表演素材）
 
@@ -145,6 +148,53 @@
           ]
         }
       ]
+    },
+    {
+      "id": "wishing_well",
+      "name": "许愿井",
+      "description": "石砌古井，井沿有刻痕。",
+      "visualDescription": "圆形石井圈，深蓝水面",
+      "placementHint": "广场南侧",
+      "interactions": [
+        {
+          "id": "drop_coin",
+          "name": "投币许愿",
+          "description": "把一枚硬币丢进井里。",
+          "duration": 1,
+          "availableWhenState": ["normal"],
+          "stateChange": "coin_resting",
+          "stateChangeDescription": "井底似乎有一枚刚被丢下的硬币",
+          "effects": []
+        },
+        {
+          "id": "pick_coin",
+          "name": "捞出井底的硬币",
+          "description": "井底刚被丢下的硬币还能看见。",
+          "duration": 1,
+          "availableWhenState": ["coin_resting"],
+          "stateChange": "normal",
+          "effects": []
+        },
+        {
+          "id": "stare_at_water",
+          "name": "凝视井水",
+          "description": "看着井水发呆。",
+          "duration": 2,
+          "effects": [
+            { "type": "character_need", "need": "curiosity", "delta": 4 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "abandoned_letter",
+      "name": "桌角的信",
+      "description": "一封蜡封未拆的信，被遗落在小桌角。",
+      "visualDescription": "白色折叠信封，红色蜡封",
+      "placementHint": "广场东南侧",
+      "pickupable": true,
+      "pickupDescription": "一封蜡封未拆的信",
+      "interactions": []
     }
   ],
   "characters": [
@@ -157,6 +207,9 @@
       "motivation": "在这个世界中的驱动力。",
       "socialStyle": "introvert/extrovert/ambivert 以及互动方式。",
       "anchor": { "type": "element", "targetId": "example_stall" },
+      "initialInventory": [
+        { "name": "祖传怀表", "description": "黄铜壳怀表，背面刻有家族姓氏，一直随身。", "tags": ["heirloom", "memory"] }
+      ],
       "initialMemories": ["背景记忆。", "关系记忆。"],
       "iconicCues": {
         "speechQuirks": ["仅当这是知名 IP 角色时才填写——描述其说话的结构性习惯。"],
@@ -176,9 +229,10 @@
 规则：
 
 - 最多 8 个角色，最少 1 个
-- `regions` + `interactiveElements` 合计最多 8 个
-- **硬性上限**：角色不能超过 8 个；`regions` 与 `interactiveElements` 合计不能超过 8 个
+- `regions` + `interactiveElements` 合计 **建议 8-12，最多 12**
+- **硬性上限**：角色不能超过 8 个；`regions` 与 `interactiveElements` 合计不能超过 12 个
 - 如果用户的**明确要求**本身已经超过上述硬性上限，不要偷偷删减、合并或弱化需求来“凑合生成”；此时必须返回 `feasible: false`
+- **密度要求（重要）**：一个让人感到"有事可做"的世界至少要满足：(1) `worldActions` ≥ 6 项；(2) `regions + interactiveElements` ≥ 8 项；(3) 每个 region 至少 3 个 interaction，每个 interactiveElement 至少 2 个 interaction；(4) 至少一半角色有 initialInventory；(5) 至少 2 个 interactiveElement 是 pickupable 的（散落物件，等待被发现）。低于这些数字会让模拟显得空洞
 - 当 `feasible: false` 时：
   - `infeasibleReason` 必须明确指出超限项（如“角色数量超出上限”“功能区与可交互元素总数超出上限”）
   - `adjustmentSuggestions` 给出 1–3 条可操作建议
@@ -221,6 +275,24 @@
 - 如果某个角色需要一直待在某个房间内（如店主待在自己的店里），应给该角色设置 `anchor: { "type": "region", "targetId": "房间id" }`
 - 自由行走的角色（旅行者、巡逻的守卫、普通居民等）不需要设置 anchor
 - 当一个 region 或 interactiveElement 有锚定角色时，其 interactions 中**需要与锚定角色面对面才能完成**的动作应标注 `"requiresAnchor": true`（如"买炊饼"需要和摊主交易、"典当物品"需要和掌柜沟通），运行时这些动作会自动转化为与锚定角色的对话。**不需要锚定角色参与**的动作标注 `"requiresAnchor": false` 或省略（如"浏览典当品"、"闻闻炊饼香味"、"看看菜单"），这些仍为普通物件交互
+
+物件状态涟漪规则（interaction 的 `stateChange` 与 `availableWhenState`）：
+
+- 一个物件的 `defaultState` 通常是 `"normal"` 或类似的字面量。运行时每个物件维护一个 state 字符串
+- 在 interaction 上可以加 `stateChange: "<新state>"`：完成此交互后，物件 state 切换到该值，**让其它角色看到不同的可选项**
+- 配合使用 `availableWhenState: ["state1", "state2"]`：仅当物件处于这些 state 时，此 interaction 才可选
+- **建议至少 1/3 的 interaction 设计带 stateChange**——让世界有"被使用过"的感觉。例如：
+  - "符文泉 → 投币许愿"（normal → coin_left）；之后"符文泉 → 拾取硬币"仅在 state==coin_left 时可见
+  - "战局板 → 标记新军情"（normal → marked）；之后"战局板 → 抹去标记"仅在 state==marked 时可见
+  - "酒桶 → 倒一杯酒"（full → half）→（half → empty），不同状态下能做的事不同
+- 不要为了 stateChange 而 stateChange——只在状态变化能创造**社交涟漪**或**资源分配冲突**时使用
+
+可拾取物件规则（`pickupable: true`）：
+
+- 与"主交互物件"不同，pickupable 元素是**场景里的具体小物件**，可以被某个角色带走，从地图上消失
+- 应被设计成**叙事种子**——拾起后能被赠送、归还、出示，触发新对话。**坏例子**：金币、面包、补给品；**好例子**："血迹斑斑的手帕"、"被撕掉一半的信"、"刻着无名徽章的扣子"、"莫名其妙的小盒子（未打开）"
+- pickupable 元素的 `interactions` 通常为空数组 `[]`——拾起动作由系统自动注入
+- 同一世界 pickupable 元素 **2-4 个为宜**
 
 角色鲜活度规则（`iconicCues` 和 `canonicalRefs`）：
 

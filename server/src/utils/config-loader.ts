@@ -160,10 +160,30 @@ function normalizeCharacterProfile(raw: any): CharacterProfile | null {
     fourthWallCandidate: raw.fourthWallCandidate ?? false,
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     initialMemories: normalizeInitialMemories(raw.initialMemories, startLocation),
+    initialInventory: normalizeInitialInventory(raw.initialInventory),
     anchor: normalizeAnchor(raw.anchor),
     iconicCues: normalizeIconicCues(raw.iconicCues),
     canonicalRefs: normalizeCanonicalRefs(raw.canonicalRefs),
   };
+}
+
+function normalizeInitialInventory(raw: unknown): CharacterProfile["initialInventory"] {
+  if (!Array.isArray(raw)) return undefined;
+  const items = raw
+    .map((it: any) => {
+      if (!it || typeof it !== "object") return null;
+      const name = typeof it.name === "string" ? it.name.trim() : "";
+      const description = typeof it.description === "string" ? it.description.trim() : "";
+      if (!name) return null;
+      return {
+        name,
+        description: description || name,
+        fromLocation: typeof it.fromLocation === "string" ? it.fromLocation : undefined,
+        tags: Array.isArray(it.tags) ? it.tags.filter((t: unknown) => typeof t === "string") : [],
+      };
+    })
+    .filter(Boolean) as NonNullable<CharacterProfile["initialInventory"]>;
+  return items.length > 0 ? items : undefined;
 }
 
 function normalizeAnchor(raw: unknown): CharacterAnchor | undefined {

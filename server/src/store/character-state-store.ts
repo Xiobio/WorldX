@@ -2,6 +2,15 @@ import { getDb } from "./db.js";
 import type { CharacterState } from "../types/index.js";
 
 function rowToState(row: any): CharacterState {
+  let inventory: CharacterState["inventory"] = [];
+  if (row.inventory) {
+    try {
+      const parsed = JSON.parse(row.inventory);
+      if (Array.isArray(parsed)) inventory = parsed;
+    } catch {
+      inventory = [];
+    }
+  }
   return {
     characterId: row.character_id,
     location: row.location,
@@ -14,6 +23,7 @@ function rowToState(row: any): CharacterState {
     emotionArousal: row.emotion_arousal,
     curiosity: row.curiosity,
     dailyPlan: row.daily_plan ?? null,
+    inventory,
   };
 }
 
@@ -23,8 +33,8 @@ export function initCharacterState(state: CharacterState): void {
       `INSERT OR IGNORE INTO character_states
        (character_id, location, main_area_point_id, current_action, current_action_target,
         action_start_tick, action_end_tick, emotion_valence, emotion_arousal,
-        curiosity, daily_plan)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        curiosity, daily_plan, inventory)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       state.characterId,
@@ -38,6 +48,7 @@ export function initCharacterState(state: CharacterState): void {
       state.emotionArousal,
       state.curiosity,
       state.dailyPlan,
+      JSON.stringify(state.inventory ?? []),
     );
 }
 
@@ -96,6 +107,10 @@ export function updateCharacterState(id: string, patch: Partial<CharacterState>)
   if (patch.dailyPlan !== undefined) {
     sets.push("daily_plan = ?");
     params.push(patch.dailyPlan);
+  }
+  if (patch.inventory !== undefined) {
+    sets.push("inventory = ?");
+    params.push(JSON.stringify(patch.inventory ?? []));
   }
 
   if (sets.length === 0) return;

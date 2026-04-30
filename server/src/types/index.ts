@@ -23,6 +23,7 @@ export type {
   DailyPlan,
   PlanItem,
   DiaryEntry,
+  InventoryItem,
 } from "./character.js";
 
 export type {

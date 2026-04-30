@@ -8,6 +8,8 @@ export const ActionDecisionSchema = z.object({
     "talk_to",
     "move_to",
     "move_within_main_area",
+    "give_item",
+    "pick_up",
     "idle",
   ]),
   targetId: z.string(),

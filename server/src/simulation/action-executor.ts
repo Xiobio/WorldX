@@ -261,6 +261,177 @@ export function executeAction(
       break;
     }
 
+    case "give_item": {
+      const recipientId = decision.targetId;
+      const itemId = decision.interactionId;
+      if (!recipientId || !itemId) {
+        console.warn(`[ActionExecutor] Dropping give_item for ${charId}: missing recipient or itemId`);
+        break;
+      }
+      const giverState = characterManager.getState(charId);
+      const item = (giverState.inventory ?? []).find((i) => i.id === itemId);
+      if (!item) {
+        console.warn(`[ActionExecutor] Dropping give_item for ${charId}: item ${itemId} not in inventory`);
+        break;
+      }
+      let recipientProfile;
+      try {
+        recipientProfile = characterManager.getProfile(recipientId);
+      } catch {
+        console.warn(`[ActionExecutor] Dropping give_item for ${charId}: recipient ${recipientId} not found`);
+        break;
+      }
+      const recipientState = characterManager.getState(recipientId);
+      if (recipientState.location !== state.location) {
+        console.warn(`[ActionExecutor] Dropping give_item for ${charId}: recipient ${recipientId} not in same location`);
+        break;
+      }
+
+      // Transfer
+      characterManager.removeItem(charId, itemId);
+      characterManager.addItem(recipientId, {
+        ...item,
+        fromCharId: charId,
+        acquiredDay: gameTime.day,
+        acquiredTick: gameTime.tick,
+      });
+
+      const giverProfile = characterManager.getProfile(charId);
+      events.push({
+        id: generateId(),
+        gameDay: gameTime.day,
+        gameTick: gameTime.tick,
+        type: "action_start",
+        actorId: charId,
+        targetId: recipientId,
+        location: state.location,
+        data: {
+          actionType: "give_item",
+          itemId: item.id,
+          itemName: item.name,
+          itemDescription: item.description,
+          recipientName: recipientProfile.name,
+          giverName: giverProfile.name,
+          reason: decision.reason,
+        },
+        innerMonologue,
+        tags: ["give_item", "social"],
+      });
+      // Write observation memories for both
+      characterManager.memoryManager.addMemory({
+        characterId: charId,
+        type: "experience",
+        content: `把"${item.name}"交给了${recipientProfile.name}。原因：${decision.reason}`,
+        gameTime,
+        importance: 6,
+        emotionalValence: 1,
+        emotionalIntensity: 3,
+        relatedCharacters: [recipientId],
+        relatedLocation: state.location,
+        relatedObjects: [item.id],
+        tags: ["gift", "give"],
+      });
+      characterManager.memoryManager.addMemory({
+        characterId: recipientId,
+        type: "experience",
+        content: `从${giverProfile.name}手中收到了"${item.name}"（${item.description}）`,
+        gameTime,
+        importance: 6,
+        emotionalValence: 1,
+        emotionalIntensity: 4,
+        relatedCharacters: [charId],
+        relatedLocation: state.location,
+        relatedObjects: [item.id],
+        tags: ["gift", "receive"],
+      });
+      // Small emotion bumps (positive social moment for both)
+      const giverEmotion = updateEmotion(
+        { valence: state.emotionValence, arousal: state.emotionArousal },
+        { valence: 2, intensity: 4 },
+      );
+      characterManager.updateState(charId, {
+        emotionValence: giverEmotion.valence,
+        emotionArousal: giverEmotion.arousal,
+      });
+      const recipEmotion = updateEmotion(
+        { valence: recipientState.emotionValence, arousal: recipientState.emotionArousal },
+        { valence: 3, intensity: 5 },
+      );
+      characterManager.updateState(recipientId, {
+        emotionValence: recipEmotion.valence,
+        emotionArousal: recipEmotion.arousal,
+      });
+      break;
+    }
+
+    case "pick_up": {
+      if (profile.anchor) {
+        console.warn(`[ActionExecutor] Dropping pick_up for ${charId}: character is anchored`);
+        break;
+      }
+      const objects = worldManager.getLocationObjects(state.location);
+      const obj = objects.find((o) => o.id === decision.targetId);
+      if (!obj) {
+        console.warn(`[ActionExecutor] Dropping pick_up for ${charId}: object ${decision.targetId} not in ${state.location}`);
+        break;
+      }
+      if (!(obj as { pickupable?: boolean }).pickupable) {
+        console.warn(`[ActionExecutor] Dropping pick_up for ${charId}: object ${obj.id} is not pickupable`);
+        break;
+      }
+      if (obj.state === "taken" || obj.state === "depleted") {
+        console.warn(`[ActionExecutor] Dropping pick_up for ${charId}: object ${obj.id} already taken/depleted`);
+        break;
+      }
+
+      const itemId = `item_${obj.id}_${gameTime.day}_${gameTime.tick}`;
+      const item = {
+        id: itemId,
+        name: obj.name,
+        description:
+          (obj as { pickupDescription?: string }).pickupDescription || obj.name,
+        fromLocation: state.location,
+        acquiredDay: gameTime.day,
+        acquiredTick: gameTime.tick,
+        tags: ["picked_up"],
+      };
+      characterManager.addItem(charId, item);
+      worldManager.updateObjectState(obj.id, "taken", `已被${profile.name}带走`);
+
+      events.push({
+        id: generateId(),
+        gameDay: gameTime.day,
+        gameTick: gameTime.tick,
+        type: "action_start",
+        actorId: charId,
+        targetId: obj.id,
+        location: state.location,
+        data: {
+          actionType: "pick_up",
+          objectId: obj.id,
+          objectName: obj.name,
+          itemId: item.id,
+          reason: decision.reason,
+        },
+        innerMonologue,
+        tags: ["pick_up"],
+      });
+      characterManager.memoryManager.addMemory({
+        characterId: charId,
+        type: "experience",
+        content: `在${state.location}拾起了 ${obj.name}。原因：${decision.reason}`,
+        gameTime,
+        importance: 5,
+        emotionalValence: 0.5,
+        emotionalIntensity: 2,
+        relatedCharacters: [],
+        relatedLocation: state.location,
+        relatedObjects: [obj.id, item.id],
+        tags: ["pick_up"],
+      });
+      break;
+    }
+
     case "idle": {
       const idleDuration = 1 + Math.floor(Math.random() * 2);
       characterManager.updateState(charId, {
@@ -358,6 +529,14 @@ export function completeAction(
       if (interaction) {
         for (const effect of interaction.effects) {
           applyEffect(effect, charId, characterManager, worldManager);
+        }
+        // Apply object state change if interaction declared one (Track C: cascading state)
+        if (interaction.stateChange && typeof interaction.stateChange === "string") {
+          worldManager.updateObjectState(
+            targetId,
+            interaction.stateChange,
+            interaction.stateChangeDescription || "",
+          );
         }
       }
       worldManager.characterStopUsingObject(targetId, charId);

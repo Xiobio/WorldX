@@ -419,7 +419,17 @@ function formatPerception(p: Perception): string {
       if (c.emotionLabel) {
         detailParts.push(`看起来${c.emotionLabel}`);
       }
+      if (c.carriedItems && c.carriedItems.length > 0) {
+        detailParts.push(`携带：${c.carriedItems.map((i) => i.name).join("、")}`);
+      }
       lines.push(`  - ${c.name}${detailParts.length > 0 ? `（${detailParts.join("；")}）` : ""}`);
+    }
+  }
+
+  if (p.myInventory && p.myInventory.length > 0) {
+    lines.push("你身上带的东西：");
+    for (const item of p.myInventory) {
+      lines.push(`  - ${item.name}（${item.description}）`);
     }
   }
 

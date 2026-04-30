@@ -55,6 +55,9 @@ export function buildPerception(
         hasZones && c.state.location === "main_area"
           ? worldManager.getMainAreaPointZone(c.state.mainAreaPointId)
           : undefined;
+      const visibleItems = (c.state.inventory ?? [])
+        .slice(0, 3)
+        .map((i) => ({ name: i.name, description: i.description }));
       return {
         id: c.profile.id,
         name: c.profile.name,
@@ -66,6 +69,7 @@ export function buildPerception(
           ? getEmotionLabel(c.state.emotionValence, c.state.emotionArousal)
           : undefined,
         zone,
+        carriedItems: visibleItems.length > 0 ? visibleItems : undefined,
       };
     });
 
@@ -100,12 +104,19 @@ export function buildPerception(
       ? worldManager.getMainAreaPointZone(state.mainAreaPointId)
       : undefined;
 
+  const myInventory = (state.inventory ?? []).map((i) => ({
+    id: i.id,
+    name: i.name,
+    description: i.description,
+  }));
+
   return {
     currentLocation: location.name,
     locationDescription: location.description,
     myZone,
     objectsHere,
     charactersHere,
+    myInventory: myInventory.length > 0 ? myInventory : undefined,
     recentEnvironmentChanges,
     recentActions,
   };

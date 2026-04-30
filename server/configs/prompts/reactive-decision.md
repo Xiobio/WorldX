@@ -37,6 +37,8 @@
 - 如果选择 `[talk_to]`，`actionType` 必须是 `"talk_to"`，`targetId` 填角色 id。
 - 如果选择 `[move_to]`，`actionType` 必须是 `"move_to"`，`targetId` 填地点 id。
 - 如果选择 `[move_within_main_area]`，`actionType` 必须是 `"move_within_main_area"`，`targetId` 填括号里的值（如 `main_area:东` 或 `main_area`）。
+- 如果选择 `[give_item]`，`actionType` 必须是 `"give_item"`，`targetId` 填**接收者角色 id**（actionMenu 末尾括号里的 char_xxx），`interactionId` 填**物品 id**（同样在 actionMenu 里）。给予物品是一个有重量的社交动作——出于信任、补偿、传递信息、求好感等明确动机才选择，不要只为了行动而行动。
+- 如果选择 `[pick_up]`，`actionType` 必须是 `"pick_up"`，`targetId` 填**物件 id**（同 actionMenu 标注）。拾起场景中明显被某人遗落、或对你有意义的小物件——它会进入你的随身物品。
 - 如果选择 `[idle]`，`actionType` 必须是 `"idle"`，`targetId` 填你当前所在地点 id。
 - 当你位于 `main_area` 这类公共区域、附近没有特定物件可用，或者只是想在镇上做一件泛化活动时，`[world_action]`、`[move_within_main_area]`、`[move_to]` 都是很自然的选择；四处换个地方活动、走去别的功能区、再回到公共区域，本来就是日常生活的一部分。
 - 当附近有人，而你对 ta 有任何自然的寒暄、试探、求证、闲聊、打听、关心或敌意时，可以直接选择 `[talk_to]`。不要明明眼前有人，却总是机械地自顾自行动。
@@ -67,9 +69,9 @@
 用 JSON 回答：
 ```json
 {
-  "actionType": "interact_object 或 world_action 或 talk_to 或 move_to 或 move_within_main_area 或 idle",
-  "targetId": "目标ID",
-  "interactionId": "交互ID（仅interact_object时需要）",
+  "actionType": "interact_object 或 world_action 或 talk_to 或 move_to 或 move_within_main_area 或 give_item 或 pick_up 或 idle",
+  "targetId": "目标ID（give_item 时为接收者 char_id；pick_up 时为物件 id）",
+  "interactionId": "交互ID（interact_object 用交互 id；give_item 用物品 id）",
   "reason": "你的内心独白，用第一人称解释为什么做这个选择（2-3句话，自然地想，不要刻意表演性格）",
   "innerMonologue": "可选：只在有戏剧张力/潜台词时写的一句心里话（≤30字），多数时候留空"
 }

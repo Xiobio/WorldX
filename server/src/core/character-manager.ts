@@ -171,6 +171,26 @@ export class CharacterManager {
     charStateStore.updateCharacterState(charId, patch);
   }
 
+  /** Add an item to the character's inventory (idempotent on item.id). */
+  addItem(charId: string, item: import("../types/index.js").InventoryItem): void {
+    const state = this.getState(charId);
+    const next = [...(state.inventory ?? []).filter((i) => i.id !== item.id), item];
+    charStateStore.updateCharacterState(charId, { inventory: next });
+  }
+
+  /** Remove item by id. Returns the removed item or null. */
+  removeItem(
+    charId: string,
+    itemId: string,
+  ): import("../types/index.js").InventoryItem | null {
+    const state = this.getState(charId);
+    const item = (state.inventory ?? []).find((i) => i.id === itemId);
+    if (!item) return null;
+    const next = (state.inventory ?? []).filter((i) => i.id !== itemId);
+    charStateStore.updateCharacterState(charId, { inventory: next });
+    return item;
+  }
+
   tickPassiveUpdate(charId: string, currentTime: GameTime): SimulationEvent[] {
     const state = this.getState(charId);
     const profile = this.getProfile(charId);
@@ -270,6 +290,16 @@ function buildInitialCharacterState(
     }
   }
 
+  const inventory = (profile.initialInventory ?? []).map((item, idx) => ({
+    id: `item_${profile.id}_init_${idx}`,
+    name: item.name,
+    description: item.description,
+    fromLocation: item.fromLocation ?? profile.startPosition,
+    tags: item.tags ?? [],
+    acquiredDay: 1,
+    acquiredTick: 0,
+  }));
+
   return {
     characterId: profile.id,
     location: profile.startPosition,
@@ -282,6 +312,7 @@ function buildInitialCharacterState(
     emotionArousal: clampStat(3 + profile.extraversionLevel * 2),
     curiosity: clampStat(64 + profile.intuitionLevel * 20),
     dailyPlan: null,
+    inventory,
   };
 }
 

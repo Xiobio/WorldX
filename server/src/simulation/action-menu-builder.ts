@@ -101,6 +101,55 @@ export function buildActionMenu(
     lines.push(...objectLines);
   }
 
+  // === 可拾取物品 (pick_up) ===
+  if (!isAnchored) {
+    const pickupLines: string[] = [];
+    let pickupCount = 0;
+    for (const obj of objects) {
+      if (pickupCount >= 6) break;
+      // pickupable flag carried in raw object config; getLocationObjects returns runtime state merged
+      const cfg = (obj as { pickupable?: boolean }).pickupable;
+      const runtimeState = (obj as { state?: string }).state;
+      if (!cfg) continue;
+      if (runtimeState === "taken" || runtimeState === "depleted") continue;
+      pickupLines.push(
+        `${idx}. [pick_up] 拾起 ${obj.name}(${obj.id})`,
+      );
+      idx++;
+      pickupCount++;
+    }
+    if (pickupLines.length > 0) {
+      lines.push("【可拾取的物品】");
+      lines.push(...pickupLines);
+    }
+  }
+
+  // === 给予物品 (give_item) ===
+  if (!isAnchored && state.inventory && state.inventory.length > 0) {
+    const giveLines: string[] = [];
+    let giveCount = 0;
+    for (const c of perception.charactersHere) {
+      if (giveCount >= 8) break;
+      const otherProfile = characterManager.getProfile(c.id);
+      const otherState = characterManager.getState(c.id);
+      if (!isLegalDirectTalkTarget(state.location, otherState.location)) continue;
+      if (otherState.currentAction === "in_conversation") continue;
+      // For each item in inventory, offer giving it to this nearby character
+      for (const item of state.inventory.slice(0, 4)) {
+        if (giveCount >= 8) break;
+        giveLines.push(
+          `${idx}. [give_item] 把"${item.name}"(${item.id})交给 ${otherProfile.name}(${c.id})`,
+        );
+        idx++;
+        giveCount++;
+      }
+    }
+    if (giveLines.length > 0) {
+      lines.push("【给予物品】");
+      lines.push(...giveLines);
+    }
+  }
+
   if (!isAnchored) {
     const charLines: string[] = [];
     for (const c of perception.charactersHere) {

@@ -55,6 +55,10 @@ export interface ObjectConfig {
   defaultState: string;
   capacity: number;
   interactions: InteractionConfig[];
+  /** 若 true，本物件代表场景中可拾取的具体物品。被拾起后转入角色 inventory，物件状态 → "taken"。 */
+  pickupable?: boolean;
+  /** 拾起后角色 inventory 中显示的简短描述（pickupable=true 时使用，缺省落回 name） */
+  pickupDescription?: string;
 }
 
 /** 交互定义 */
@@ -68,6 +72,10 @@ export interface InteractionConfig {
   repeatable?: boolean;
   /** When true, this interaction requires dialogue with the anchored character instead of standalone object interaction */
   requiresAnchor?: boolean;
+  /** 完成此交互后，将物件 state 切到此值（持久化到 world_object_states.state）。可让物件状态在世界中产生涟漪。 */
+  stateChange?: string;
+  /** 与 stateChange 同时切换的人类可读说明（用于其它角色感知物件已变化） */
+  stateChangeDescription?: string;
 }
 
 /** 世界级动作定义 */

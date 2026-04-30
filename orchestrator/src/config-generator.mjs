@@ -140,6 +140,17 @@ export function generateConfigs(worldDesign, worldDir, options = {}) {
       tags: ["background", "signature_moment"],
     }));
 
+    const initialInventory = Array.isArray(charDesign.initialInventory)
+      ? charDesign.initialInventory
+          .filter((it) => it && typeof it === "object" && typeof it.name === "string" && it.name.trim())
+          .map((it) => ({
+            name: it.name.trim(),
+            description: typeof it.description === "string" ? it.description.trim() : it.name.trim(),
+            fromLocation: typeof it.fromLocation === "string" ? it.fromLocation : undefined,
+            tags: Array.isArray(it.tags) ? it.tags.filter((t) => typeof t === "string") : [],
+          }))
+      : [];
+
     const config = {
       id: charId,
       name: charDesign.name,
@@ -153,6 +164,7 @@ export function generateConfigs(worldDesign, worldDir, options = {}) {
       initialMemories: [...backgroundMemories, ...signatureMemories],
     };
 
+    if (initialInventory.length > 0) config.initialInventory = initialInventory;
     if (anchor) config.anchor = anchor;
     if (iconicCues) config.iconicCues = iconicCues;
     if (canonicalRefs) config.canonicalRefs = canonicalRefs;
@@ -225,6 +237,11 @@ function buildLocations(tmjRegions, tmjObjects, worldDesign, tmj) {
               duration: inter.duration || 2,
               effects: inter.effects || [{ type: "character_need", target: "curiosity", value: 5 }],
               repeatable: inter.repeatable ?? true,
+              ...(inter.requiresAnchor === true ? { requiresAnchor: true } : {}),
+              ...(typeof inter.stateChange === "string" ? { stateChange: inter.stateChange } : {}),
+              ...(typeof inter.stateChangeDescription === "string"
+                ? { stateChangeDescription: inter.stateChangeDescription }
+                : {}),
             })),
           };
         });
@@ -247,6 +264,10 @@ function buildLocations(tmjRegions, tmjObjects, worldDesign, tmj) {
                 effects: inter.effects || [],
                 repeatable: inter.repeatable ?? true,
                 ...(inter.requiresAnchor === true ? { requiresAnchor: true } : {}),
+                ...(typeof inter.stateChange === "string" ? { stateChange: inter.stateChange } : {}),
+                ...(typeof inter.stateChangeDescription === "string"
+                  ? { stateChangeDescription: inter.stateChangeDescription }
+                  : {}),
               },
             ],
           });
@@ -340,9 +361,19 @@ function buildElementObjects(designedElements, tmjObjects) {
       effects: inter.effects || [],
       repeatable: inter.repeatable ?? true,
       ...(inter.requiresAnchor === true ? { requiresAnchor: true } : {}),
+      ...(typeof inter.stateChange === "string" ? { stateChange: inter.stateChange } : {}),
+      ...(typeof inter.stateChangeDescription === "string"
+        ? { stateChangeDescription: inter.stateChangeDescription }
+        : {}),
     }));
 
-    return {
+    // Heuristic: an interactiveElement with no interactions is treated as pickupable
+    // (designer prompt correlates "empty interactions" with "narrative seed item").
+    const inferredPickupable =
+      element.pickupable === true ||
+      (element.pickupable !== false && (!Array.isArray(element.interactions) || element.interactions.length === 0));
+
+    const obj = {
       id: element.id,
       name: element.name,
       locationId: "main_area",
@@ -350,6 +381,15 @@ function buildElementObjects(designedElements, tmjObjects) {
       capacity: 2,
       interactions,
     };
+    if (inferredPickupable) {
+      obj.pickupable = true;
+      const desc =
+        typeof element.pickupDescription === "string" && element.pickupDescription.trim()
+          ? element.pickupDescription.trim()
+          : (typeof element.description === "string" ? element.description.trim() : element.name);
+      obj.pickupDescription = desc;
+    }
+    return obj;
   });
 }
 
