@@ -12,6 +12,44 @@ const MODEL = process.env.IMAGE_GEN_MODEL || DEFAULT_MODEL;
 const BASE_URL = process.env.IMAGE_GEN_BASE_URL || DEFAULT_BASE_URL;
 const DEFAULT_REQUEST_TIMEOUT_MS = parseInt(process.env.IMAGE_GEN_TIMEOUT_MS || "180000", 10);
 const MAX_CONSECUTIVE_FAILURES = 2;
+const PROTOCOL = (process.env.IMAGE_GEN_PROTOCOL || "chat-completions").toLowerCase();
+const QUALITY = process.env.IMAGE_GEN_QUALITY || "high";
+
+function pickOpenAISize(aspectRatio, refBuffer) {
+  if (refBuffer && refBuffer.length > 24 && refBuffer[0] === 0x89 && refBuffer[1] === 0x50) {
+    const w = refBuffer.readUInt32BE(16);
+    const h = refBuffer.readUInt32BE(20);
+    if (w > h * 1.1) return "1536x1024";
+    if (h > w * 1.1) return "1024x1536";
+    return "1024x1024";
+  }
+  if (!aspectRatio || aspectRatio === "1:1") return "1024x1024";
+  const [aw, ah] = aspectRatio.split(":").map(Number);
+  if (!aw || !ah) return "1024x1024";
+  if (aw > ah) return "1536x1024";
+  if (ah > aw) return "1024x1536";
+  return "1024x1024";
+}
+
+async function callOpenAIImages({ endpoint, body, formData, signal, apiKey }) {
+  const headers = { Authorization: `Bearer ${apiKey}` };
+  const init = { method: "POST", headers, signal };
+  if (formData) {
+    init.body = formData;
+  } else {
+    headers["Content-Type"] = "application/json";
+    init.body = JSON.stringify(body);
+  }
+  const res = await fetch(`${BASE_URL}/${endpoint}`, init);
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Image Gen API error ${res.status}: ${err}`);
+  }
+  const data = await res.json();
+  const b64 = data?.data?.[0]?.b64_json;
+  if (!b64) throw new Error("No b64_json in OpenAI image response");
+  return Buffer.from(b64, "base64");
+}
 
 async function withRetry(fn, logStep) {
   for (let attempt = 1; attempt <= MAX_CONSECUTIVE_FAILURES; attempt++) {
@@ -59,6 +97,24 @@ export async function generateImage(
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
+      let buf;
+      if (PROTOCOL === "openai-images") {
+        buf = await callOpenAIImages({
+          endpoint: "images/generations",
+          body: {
+            model: MODEL,
+            prompt,
+            n: 1,
+            size: pickOpenAISize(aspectRatio),
+            quality: QUALITY,
+          },
+          signal: controller.signal,
+          apiKey: API_KEY,
+        });
+        logModelImageResponse(logStep, MODEL, "(returned to caller)", buf.length);
+        return buf;
+      }
+
       const res = await fetch(`${BASE_URL}/chat/completions`, {
         method: "POST",
         headers: {
@@ -82,7 +138,7 @@ export async function generateImage(
       }
 
       const data = await res.json();
-      const buf = extractImageBuffer(data);
+      buf = extractImageBuffer(data);
       logModelImageResponse(logStep, MODEL, "(returned to caller)", buf.length);
       return buf;
     } catch (e) {
@@ -110,12 +166,30 @@ export async function editImage(text, imageBuffer, { imageSize = "2K", logStep =
     logModelCall(logStep, MODEL, text, [`input_image: ${(imageBuffer.length / 1024).toFixed(0)}KB`, `config: size=${imageSize}`]);
     const timeoutMs = resolveRequestTimeoutMs(requestTimeoutMs, timeoutEnvKey);
 
-    const base64 = imageBuffer.toString("base64");
-
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
+      let buf;
+      if (PROTOCOL === "openai-images") {
+        const form = new FormData();
+        form.append("model", MODEL);
+        form.append("prompt", text);
+        form.append("size", pickOpenAISize(null, imageBuffer));
+        form.append("quality", QUALITY);
+        form.append("n", "1");
+        form.append("image", new Blob([imageBuffer], { type: "image/png" }), "input.png");
+        buf = await callOpenAIImages({
+          endpoint: "images/edits",
+          formData: form,
+          signal: controller.signal,
+          apiKey: API_KEY,
+        });
+        logModelImageResponse(logStep, MODEL, "(returned to caller)", buf.length);
+        return buf;
+      }
+
+      const base64 = imageBuffer.toString("base64");
       const res = await fetch(`${BASE_URL}/chat/completions`, {
         method: "POST",
         headers: {
@@ -150,7 +224,7 @@ export async function editImage(text, imageBuffer, { imageSize = "2K", logStep =
       }
 
       const data = await res.json();
-      const buf = extractImageBuffer(data);
+      buf = extractImageBuffer(data);
       logModelImageResponse(logStep, MODEL, "(returned to caller)", buf.length);
       return buf;
     } catch (e) {
