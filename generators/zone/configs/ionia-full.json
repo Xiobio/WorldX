@@ -1,0 +1,399 @@
+{
+  "zoneId": "ionia-full",
+  "zoneName": "艾欧尼亚 · 完整版 (36 chunks, zone-graph mode)",
+
+  "zoneIdentity": "Ionia from League of Legends — the post-Noxian-invasion era of the First Lands. Eastern fantasy ink-and-wash illustration aesthetic with rich pastel palette: jade green, cherry pink, mist white, weathered wood brown, lantern gold. Painterly top-down to high-angle 60-90° view. Soft watercolor edges, ambient golden-hour lighting, atmospheric mist. Building style: low Eastern wood-and-paper architecture with multi-tier curved roofs, frequently shown in cross-section (no roof, low walls, interior visible). Terrain mix: bamboo groves, pine forests, cherry blossoms, rice paddies, stone-paved paths, slow rivers, paper lanterns, stone shrines, paper-lantern festivals, distant misty peaks. Mood: spiritually charged, recovering yet melancholic, with subtle scars of recent war. Each scene is its own beautiful illustration; visual variety across the zone is welcomed.",
+
+  "geographyLayout": "Ionia is a south-elongated island nation. Center spine runs north (mountains: Bahrl + Shojin) → middle (Placidium of Navori, the spiritual capital) → south (Shon-Xan rice fields, Galrin Port). The eastern coast faces the Valoran mainland. Rivers flow generally toward the east. The northeast holds the Order of Shadow's hidden eyrie. The central-east hosts the Spirit Bough Crossing (a magical rift). The southwest is recovering war-scarred fishing villages. The southeast holds Galrin's busy harbor and a ruined battle-front belt.",
+
+  "grid": {
+    "rows": 7,
+    "cols": 6,
+    "chunks": [
+      {
+        "id": "R0C0",
+        "row": 0, "col": 0,
+        "kind": "transition",
+        "shortName": "西北外海",
+        "content": "Far-northwest open sea seen from above. Expansive misty ocean dominates the frame; in the upper right corner, the bases of the Bahrl mountains rise from the water with pine-clinging cliffs. A scattering of jagged rocks pokes out of the waves. A few drifting paper lanterns float on the swell. Distant flock of cranes implied as small painted silhouettes.",
+        "interactiveElements": []
+      },
+      {
+        "id": "R0C5",
+        "row": 0, "col": 5,
+        "kind": "transition",
+        "shortName": "东北雾海",
+        "content": "Northeastern misty sea. Steep dark cliffs occupy the left edge with pines clinging to their top; the rest of the frame is silvery sea fading into white mist. A handful of jagged sea-stacks rise from the water. The water has gentle, broken white-cap brushwork. A weathered shipwreck timber lies half-submerged.",
+        "interactiveElements": []
+      },
+      {
+        "id": "R1C5",
+        "row": 1, "col": 5,
+        "kind": "transition",
+        "shortName": "东海岛屿",
+        "content": "Cluster of small wooded outer islands floating in a calm eastern sea. Each islet has a few pines or bamboo and an occasional moss-covered shrine. A shallow bay between two of the larger islets. The water reflects the sky in soft horizontal brushstrokes. Faint cherry-blossom hints on one distant islet.",
+        "interactiveElements": [{ "name": "孤岛神龛", "description": "无人小岛上的苔绿石龛" }]
+      },
+      {
+        "id": "R4C0",
+        "row": 4, "col": 0,
+        "kind": "transition",
+        "shortName": "西崖外海",
+        "content": "West-coast outer sea. Rugged black volcanic rocks at the right edge of the frame plunge into the surf, with a single small pebble cove. The rest of the frame is open misty sea. Driftwood scattered along the rocks. A weathered torii arch stands in the shallow water as a half-forgotten landmark. Crows wheel above as small silhouettes.",
+        "interactiveElements": [{ "name": "海中鸟居", "description": "立于浅滩的旧鸟居" }]
+      },
+      {
+        "id": "R5C0",
+        "row": 5, "col": 0,
+        "kind": "transition",
+        "shortName": "西南渔海",
+        "content": "Southwestern open sea with a small fishing fleet. Two or three small wooden fishing boats with lateen-style sails ride the swell, set against a soft sunset glow on the horizon. Faint distant island silhouettes at the top of the frame. A scattering of paper lanterns drifting on the water near the bottom-right corner. Atmospheric, peaceful.",
+        "interactiveElements": [{ "name": "渔船", "description": "撒网作业的小型渔船" }]
+      },
+      {
+        "id": "R6C0",
+        "row": 6, "col": 0,
+        "kind": "transition",
+        "shortName": "南境礁岸",
+        "content": "Southwestern rocky shoreline. The right side of the frame is a thin strip of pale-pebble beach with reeds and a few stray cherry-petals; the rest is shallow sea broken by black tidal rocks. A small upturned skiff lies on the sand being repaired. A weathered wooden marker post leans on the beach. The atmosphere is quiet, end-of-day.",
+        "interactiveElements": [{ "name": "翻覆船", "description": "翻在沙滩上修补中的小舟" }]
+      },
+      {
+        "id": "R0C1",
+        "row": 0, "col": 1,
+        "kind": "transition",
+        "shortName": "北境竹岭",
+        "content": "Far-north bamboo ridge. Gnarled bamboo grows on hillsides cut by stone-paved switchback paths. Ancient stone obelisks half-swallowed by moss. Distant fog-veiled peaks above. A small wooden bell-tower stands on a saddle.",
+        "interactiveElements": [{ "name": "古钟楼", "description": "废弃的山间钟楼" }]
+      },
+      {
+        "id": "R0C2_L07",
+        "row": 0, "col": 2,
+        "kind": "landmark",
+        "shortName": "巴尔猴王城",
+        "content": "Mountaintop Vastayan tree-city: dozens of wooden tree-houses connected by rope bridges between massive ancient trees. A central platform with carved stone-monkey statue. A sweeping flag of woven leaves. The whole settlement is set into the canopy with mist below.",
+        "interactiveElements": [
+          { "name": "猴王座", "description": "悟空族的祖座，刻满故事" },
+          { "name": "藤桥广场", "description": "树间藤桥交汇的中央平台" }
+        ]
+      },
+      {
+        "id": "R0C3",
+        "row": 0, "col": 3,
+        "kind": "transition",
+        "shortName": "山脊驿道",
+        "content": "Steep ridgeline. A narrow stone path snakes along the spine of a mountain with deep mist-filled valleys to either side. A handful of pilgrim lanterns dot the path. A wayfarer's stone shrine occupies a small flat shoulder.",
+        "interactiveElements": [{ "name": "驿路神龛", "description": "刻着三角符文的旅人神龛" }]
+      },
+      {
+        "id": "R0C4",
+        "row": 0, "col": 4,
+        "kind": "transition",
+        "shortName": "雾境峰林",
+        "content": "Cluster of jagged stone peaks above the cloud sea. Pines clinging to cliff faces. A ruined bird-shaped weather vane atop the highest spire. The light is silvery, the air thin.",
+        "interactiveElements": []
+      },
+      {
+        "id": "R1C0",
+        "row": 1, "col": 0,
+        "kind": "transition",
+        "shortName": "西海礁岸",
+        "content": "Western seacoast: jagged black rocks, white surf, a single weathered fisherman's totem post wrapped in faded prayer flags. A rocky beach trail descends to the water. Distant gulls implied by their painted silhouettes.",
+        "interactiveElements": [{ "name": "渔人柱", "description": "缠满褪色祈福布的木柱" }]
+      },
+      {
+        "id": "R1C1_L08",
+        "row": 1, "col": 1,
+        "kind": "landmark",
+        "shortName": "翁玛梦林",
+        "content": "Dreamlike forest where reality bends. Trees are unusually tall and pale-leafed; the air glimmers with iridescent dust. A narrow stream flows through it carrying fallen petals. Strange phosphorescent flowers glow at the bases of the largest trees. The composition is hauntingly beautiful, dream-tinted.",
+        "interactiveElements": [
+          { "name": "梦境之树", "description": "中央巨树，叶片半透明发光" },
+          { "name": "迷雾走廊", "description": "薄雾中的隐秘小径" }
+        ]
+      },
+      {
+        "id": "R1C2",
+        "row": 1, "col": 2,
+        "kind": "transition",
+        "shortName": "修真山道",
+        "content": "Pine-cloaked mountain road climbing toward the monastery. Stone steps cut into the slope. Wind chimes hung between trees. A small circular meditation platform with a single bonsai. Wisps of fog drift between trunks.",
+        "interactiveElements": [{ "name": "禅坛", "description": "苔石禅坛，松针铺地" }]
+      },
+      {
+        "id": "R1C3_L04",
+        "row": 1, "col": 3,
+        "kind": "landmark",
+        "shortName": "修真寺",
+        "content": "Mountaintop sword-style monastery. Several wooden cross-section halls (no roofs, you can see the interior — wooden floors, training racks, scrolls) arranged around a central windswept courtyard. A great upright sword-stone monument in the courtyard. A waterfall plummets off the edge to the right of the temple.",
+        "interactiveElements": [
+          { "name": "断剑碑", "description": "巨大的断剑石碑，纪念坠剑亡者" },
+          { "name": "御风殿", "description": "修真寺主殿，内可习剑" }
+        ]
+      },
+      {
+        "id": "R1C4_L05",
+        "row": 1, "col": 4,
+        "kind": "landmark",
+        "shortName": "影流秘窟",
+        "content": "Hidden cliffside hideout of the Order of Shadow. A series of dark wooden platforms and ladders pinned to a sheer rock face, partially obscured by trees. A black banner with red trim. Training dummies arranged at the base. The light is colder, more shadow-heavy than the rest of the zone.",
+        "interactiveElements": [
+          { "name": "训练桩林", "description": "排列整齐的暗影木桩" },
+          { "name": "卷宗洞", "description": "藏入岩壁的卷宗洞穴" }
+        ]
+      },
+
+      {
+        "id": "R2C0",
+        "row": 2, "col": 0,
+        "kind": "transition",
+        "shortName": "西崖渔市",
+        "content": "Cliff-top tiny fishing market. A handful of wooden stalls on the bluff overlooking the sea, drying fish lines, a hauling crane. A wooden platform extends out over the surf. A single stone path winds inland from here.",
+        "interactiveElements": [{ "name": "晒鱼场", "description": "竹竿绳网晒满咸鱼" }]
+      },
+      {
+        "id": "R2C1",
+        "row": 2, "col": 1,
+        "kind": "transition",
+        "shortName": "樱花林径",
+        "content": "Cherry-blossom corridor cut by a wide stone path heading south. Pink petals drift through the air and lie thick on the ground. A solitary stone bench by a calm pond reflects the canopy. A deer-shaped stone lantern half-buried in petals.",
+        "interactiveElements": [{ "name": "鹿型石灯", "description": "古朴的鹿形石灯笼" }]
+      },
+      {
+        "id": "R2C2_L01A",
+        "row": 2, "col": 2,
+        "kind": "landmark",
+        "shortName": "纳沃利圣坛",
+        "content": "Heart of the Placidium of Navori. A grand multi-tier wooden temple (cross-section, low walls, interior shows wooden pews and a sacred altar) sits at center, surrounded by a stone-paved circular courtyard. Four roads radiate outward in a perfect cross. Bamboo stands at the four cardinal points, cherry blossoms scatter at the corners. The atmosphere is sacred and quietly recovering.",
+        "interactiveElements": [
+          { "name": "祭坛", "description": "圆形白石祭坛，可祈愿" },
+          { "name": "圣殿", "description": "纳沃利圣殿主殿，可入" }
+        ]
+      },
+      {
+        "id": "R2C3",
+        "row": 2, "col": 3,
+        "kind": "transition",
+        "shortName": "灵息小径",
+        "content": "A path leading east from Placidium toward the spirit rift. The trees lean weirdly here, leaves shimmering in unnatural pastel hues. Glowing motes drift through the air. A few stone wayfarer markers carved with crescents.",
+        "interactiveElements": [{ "name": "灵息石", "description": "微微发光的紫晶石碑" }]
+      },
+      {
+        "id": "R2C4",
+        "row": 2, "col": 4,
+        "kind": "transition",
+        "shortName": "东林溪",
+        "content": "A wide bamboo grove broken by a small clear stream. A mossy stone bridge crosses the stream. A pair of stone lanterns flank the bridge. Fireflies drift in the dimness under the bamboo.",
+        "interactiveElements": [{ "name": "苔石桥", "description": "苔藓覆盖的小石桥" }]
+      },
+      {
+        "id": "R2C5",
+        "row": 2, "col": 5,
+        "kind": "transition",
+        "shortName": "东境森林",
+        "content": "Dense pine forest near the eastern coast. A single old hunter's cabin (cross-section: roof off, simple wooden interior with a hearth) stands in a small clearing. Wood smoke curls up.",
+        "interactiveElements": [{ "name": "猎人小屋", "description": "破旧但有烟火气的小木屋，可入" }]
+      },
+
+      {
+        "id": "R3C0",
+        "row": 3, "col": 0,
+        "kind": "transition",
+        "shortName": "西崖瞭望",
+        "content": "Western cliff lookout. A wooden viewing platform on stilts hangs over the seacliff. A weathered stone bench. The sea below is rendered with soft white-capped waves. Cherry petals occasionally drift by even though the trees are out of frame.",
+        "interactiveElements": [{ "name": "瞭望台", "description": "木质瞭望台，俯瞰大海" }]
+      },
+      {
+        "id": "R3C1",
+        "row": 3, "col": 1,
+        "kind": "transition",
+        "shortName": "灵能赤地",
+        "content": "A patch of land scarred by leaking spirit energy. The grass is silvered, a few trees are partially translucent / overlapped with their dream-versions. A faint purple haze hangs over everything. Stone wards have been planted in a circle to contain whatever lives here.",
+        "interactiveElements": [{ "name": "镇压石阵", "description": "围成圆圈的镇灵石碑" }]
+      },
+      {
+        "id": "R3C2_L01B",
+        "row": 3, "col": 2,
+        "kind": "landmark",
+        "shortName": "纳沃利市集",
+        "content": "Western district of the Placidium: a partially rebuilt market with paper-lantern stalls — tea house, calligraphy shop, herb stand, all shown cross-section so interiors are visible. A few stone walls being repaired. Lanterns string between buildings. A dirt road exits toward the Placidium's central plaza.",
+        "interactiveElements": [
+          { "name": "茶肆", "description": "热气腾腾的茶摊" },
+          { "name": "字画铺", "description": "墙上挂满字画的小铺" }
+        ]
+      },
+      {
+        "id": "R3C3_L09",
+        "row": 3, "col": 3,
+        "kind": "landmark",
+        "shortName": "灵息渡口",
+        "content": "Spirit Bough Crossing — a magical rift in reality. A grove of pale spirit trees encircles a glowing pool of mist where the spirit world bleeds through. Floating ribbons of light. Paper-lantern offerings drift in the air. A single wooden torii arch marks the threshold. The most magical, otherworldly scene in the zone.",
+        "interactiveElements": [
+          { "name": "灵息池", "description": "通往神域的灵能池" },
+          { "name": "灵会香坛", "description": "悬浮的香炉，飘着香烟和符纸" }
+        ]
+      },
+      {
+        "id": "R3C4_L10",
+        "row": 3, "col": 4,
+        "kind": "landmark",
+        "shortName": "羽族秘巢",
+        "content": "Vastayan resistance hideout deep in the canopy. Multiple wooden treetop platforms connected by rope bridges high above the forest floor. Feather charms hang from every railing. A central practice ground with a target wall. The light filters down through the canopy in dappled shafts.",
+        "interactiveElements": [
+          { "name": "羽箭训练场", "description": "藤架靶场" },
+          { "name": "高台栖巢", "description": "霞与洛常驻的羽族栖巢" }
+        ]
+      },
+      {
+        "id": "R3C5",
+        "row": 3, "col": 5,
+        "kind": "transition",
+        "shortName": "东境林路",
+        "content": "Quiet east-forest road heading south. Birch and maple mix; autumn has subtly arrived here, with a few golden leaves. A simple wooden bridge crosses a stream. A small stone way-marker post points two directions.",
+        "interactiveElements": [{ "name": "三叉路碑", "description": "三向路标石" }]
+      },
+
+      {
+        "id": "R4C1_L11",
+        "row": 4, "col": 1,
+        "kind": "landmark",
+        "shortName": "战痕渔村",
+        "content": "Coastal fishing village still bearing scars of the Noxian invasion. Several burned-out husks of houses sit beside still-standing thatched cottages. A central stone monument lists names. White prayer flags flutter above broken walls. A single dock with a small fishing boat moored to it. The atmosphere is melancholic but resolute.",
+        "interactiveElements": [
+          { "name": "诺战纪念碑", "description": "刻满阵亡者名字的石碑" },
+          { "name": "破屋", "description": "焚毁后只剩骨架的屋子" }
+        ]
+      },
+      {
+        "id": "R4C2_L01C",
+        "row": 4, "col": 2,
+        "kind": "landmark",
+        "shortName": "断墙广场",
+        "content": "Southern wing of the Placidium — a memorial plaza dominated by the broken outer wall left as a relic of the war. Standing stones with carved names line a stone path. Withered flower wreaths and white cloth offerings cover the bases. A single bell on a wooden frame, rung in mourning. Atmospheric, somber.",
+        "interactiveElements": [
+          { "name": "誓言钟", "description": "悼亡之钟，可敲响" },
+          { "name": "石像群", "description": "战死烈士石像群" }
+        ]
+      },
+      {
+        "id": "R4C3_L06",
+        "row": 4, "col": 3,
+        "kind": "landmark",
+        "shortName": "均衡神殿",
+        "content": "Kinkou Temple of Balance, hidden in a dense bamboo grove. A multi-tier wooden hall (cross-section) sits beside a perfectly still circular reflecting pool. Smaller meditation huts dot the grove around it. Twin stone lanterns flank the entrance path. The atmosphere is hushed, perfectly balanced.",
+        "interactiveElements": [
+          { "name": "主殿", "description": "锦魁三守护本部" },
+          { "name": "灵泉", "description": "圆形倒映水池" }
+        ]
+      },
+      {
+        "id": "R4C4",
+        "row": 4, "col": 4,
+        "kind": "transition",
+        "shortName": "灵林边境",
+        "content": "Edge of the spirit-touched forest. The path passes between subtle wards — a row of small stone foxes. The mist deepens to the west, the mundane light strengthens to the east. A stream cuts diagonally across the scene.",
+        "interactiveElements": [{ "name": "石狐列阵", "description": "镇守边境的石雕狐群" }]
+      },
+      {
+        "id": "R4C5",
+        "row": 4, "col": 5,
+        "kind": "transition",
+        "shortName": "东南林海",
+        "content": "Wider mixed forest hosting a small farmstead. A single thatched-roof farmhouse (this one IS roofed, scenery only) with a fenced kitchen garden. Smoke curls from a stone chimney. A pumpkin patch and a clothesline complete the rural feel.",
+        "interactiveElements": [{ "name": "菜园", "description": "丰收的家庭菜园" }]
+      },
+
+      {
+        "id": "R5C1",
+        "row": 5, "col": 1,
+        "kind": "transition",
+        "shortName": "西稻田阡陌",
+        "content": "Western rice paddies arranged in geometric patches with raised dirt boundaries. A wooden waterwheel turns slowly beside an irrigation channel. A scarecrow in a straw hat. A single farmer's hut at the edge.",
+        "interactiveElements": [{ "name": "水车", "description": "古老的木水车" }]
+      },
+      {
+        "id": "R5C2_L03",
+        "row": 5, "col": 2,
+        "kind": "landmark",
+        "shortName": "修桑稻田",
+        "content": "Yasuo's home village set in golden rice paddies. A small cluster of cross-section wooden cottages, a wide central path, and a stone shrine where Yasuo's brother is honored. A lone weathered straw hat hangs on a fence post. Wind ripples the rice. The sky has a melancholy gold tint.",
+        "interactiveElements": [
+          { "name": "兄弟祠", "description": "纪念永恩的小石龛" },
+          { "name": "亚索旧居", "description": "亚索的童年木屋" }
+        ]
+      },
+      {
+        "id": "R5C3",
+        "row": 5, "col": 3,
+        "kind": "transition",
+        "shortName": "中央稻田",
+        "content": "Wide rice paddies with the main southern road running through. A small stone war memorial with white prayer flags by the road. A wooden cart abandoned by a paddy edge. A bamboo grove on the east side.",
+        "interactiveElements": [{ "name": "战痕碑", "description": "诺战阵亡纪念石碑" }]
+      },
+      {
+        "id": "R5C4",
+        "row": 5, "col": 4,
+        "kind": "transition",
+        "shortName": "东稻坡地",
+        "content": "Terraced rice paddies stepping down a hillside toward the eastern coast. Small irrigation channels glint between terraces. A path zigzags down. At the bottom, the path joins a coastal road heading toward the harbor.",
+        "interactiveElements": []
+      },
+      {
+        "id": "R5C5_L02",
+        "row": 5, "col": 5,
+        "kind": "landmark",
+        "shortName": "加林港",
+        "content": "Galrin Port — busy commercial harbor. Several wooden docks reach into the bay. Ships of varied design (small fishing boats, larger merchant junks). A central plaza with paper lanterns strung overhead. Cross-section buildings include a tea house, a smuggler's tavern, a warehouse stacked with crates. A stone lighthouse stands on the headland.",
+        "interactiveElements": [
+          { "name": "灯塔", "description": "圆柱石灯塔" },
+          { "name": "走私酒馆", "description": "海盗常出没的酒馆，可入" },
+          { "name": "货栈", "description": "堆满木箱的货栈" }
+        ]
+      },
+
+      {
+        "id": "R6C1",
+        "row": 6, "col": 1,
+        "kind": "transition",
+        "shortName": "南海礁滩",
+        "content": "Southern rocky beach. Black volcanic rocks, white surf, scattered tide pools. A single wrecked fishing boat lies hull-up on the shore. Driftwood is piled in places.",
+        "interactiveElements": [{ "name": "搁浅渔船", "description": "翻覆已久的小渔船" }]
+      },
+      {
+        "id": "R6C2_L12",
+        "row": 6, "col": 2,
+        "kind": "landmark",
+        "shortName": "流浪戏团",
+        "content": "Itinerant performers' camp by the southern road. A circular cluster of canvas tents in muted reds and yellows. A central stage with paper lanterns strung above it. A wooden caravan with painted side panels. A campfire ring with a tea kettle on it.",
+        "interactiveElements": [
+          { "name": "戏台", "description": "彩灯环绕的小戏台" },
+          { "name": "彩绘大篷车", "description": "戏团巡演的大篷车" }
+        ]
+      },
+      {
+        "id": "R6C3",
+        "row": 6, "col": 3,
+        "kind": "transition",
+        "shortName": "南境海岸",
+        "content": "Long sweeping beach with paddies meeting sand. A wooden pier extends into the water. A few overturned boats being repaired on the sand. A coastal path traces the shoreline.",
+        "interactiveElements": []
+      },
+      {
+        "id": "R6C4",
+        "row": 6, "col": 4,
+        "kind": "transition",
+        "shortName": "南战痕地",
+        "content": "Battle-scarred frontier zone south of Placidium. Burnt earth in patches, broken pieces of armor and Noxian banners half-buried, a ruined siege catapult tipped on its side. Wildflowers are starting to reclaim the soil. A single broken-arrow monument.",
+        "interactiveElements": [{ "name": "断箭碑", "description": "纪念阵亡的断箭石碑" }]
+      },
+      {
+        "id": "R6C5",
+        "row": 6, "col": 5,
+        "kind": "transition",
+        "shortName": "港口战痕",
+        "content": "Inland approach to Galrin Port still showing battle scars. A burnt warehouse, rebuilt with patches of new wood. A pile of cannon balls left over from the war. A stone obelisk listing the names of those who held the harbor. A barrel cart on the road.",
+        "interactiveElements": [{ "name": "守港碑", "description": "纪念守港之战的方尖碑" }]
+      }
+    ]
+  }
+}

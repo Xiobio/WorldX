@@ -1,0 +1,134 @@
+{
+  "zoneId": "ionia-3x3",
+  "zoneName": "艾欧尼亚 · 纳沃利核心 (3×3 prototype, v2)",
+
+  "zoneIdentity": "Ionia from League of Legends — the post-Noxian-invasion era of the First Lands. Eastern fantasy ink-and-wash aesthetic with soft pastel palette: jade green, mist white, weathered wood brown, stone gray. Strict orthographic top-down 90° game-map view. Soft watercolor edges, no harsh outlines, golden-hour ambient light. Building style: low Eastern wood-and-paper architecture with multi-tier curved roofs, shown in cross-section (no roof visible, low walls, interior visible). Terrain mix: bamboo groves, pine forests, rice paddies, stone-paved paths, slow rivers, paper lanterns, stone shrines. Mood: spiritually charged, recovering yet melancholic, with subtle scars of recent war. Cherry blossoms (pink) ONLY in chunks where the content explicitly mentions them.",
+
+  "geographyLayout": "This 3x3 slice covers the central Navori region of Ionia. Center-row hosts the Placidium of Navori (the rebuilt spiritual capital). North row is hilly bamboo forest leading toward Shojin mountain monastery. South row transitions into Shon-Xan rice fields. A single straight north-south main road runs vertically through the CENTER COLUMN at x=512 of every chunk, connecting all three rows. A river flows from northwest to southeast along a diagonal: it enters at C00's top-left corner, crosses through C11's southwest quadrant, and exits at C22's bottom-right corner. East column has slightly elevated terrain. West column is lowland.",
+
+  "grid": {
+    "rows": 3,
+    "cols": 3,
+    "chunks": [
+      {
+        "id": "C00",
+        "row": 0,
+        "col": 0,
+        "kind": "transition",
+        "shortName": "竹林山道",
+        "content": "Northwest hill country: dense bamboo grove on hillside terrain. A small stone shrine (山神祠) sits in the middle. A stone-paved path enters the chunk from the SOUTH edge at x=512 (perpendicular crossing the south border) and exits the EAST edge at y=512 (perpendicular crossing the east border). The river enters this chunk at the top-left corner and flows diagonally toward the bottom-right of the chunk.",
+        "allowedFlora": "bamboo, pine, moss, mountain grass",
+        "forbiddenElements": "cherry blossoms, rice paddies, market stalls, large buildings",
+        "interactiveElements": [
+          { "name": "山神祠", "description": "苔藓覆盖的小石龛，供着风神面具" }
+        ]
+      },
+      {
+        "id": "C01",
+        "row": 0,
+        "col": 1,
+        "kind": "transition",
+        "shortName": "樱花林径",
+        "content": "Cherry-blossom grove with the central NORTH-SOUTH ROAD running vertically at x=512 (enters from the north edge at x=512, exits the south edge at x=512). A small stone bench by a quiet pond near the road. Pink petals scatter on the ground beside the road.",
+        "allowedFlora": "cherry blossom (pink), bamboo, mountain grass",
+        "forbiddenElements": "rice paddies, market stalls, large buildings",
+        "interactiveElements": [
+          { "name": "石长椅", "description": "可以坐下休息的青石长椅" }
+        ]
+      },
+      {
+        "id": "C02",
+        "row": 0,
+        "col": 2,
+        "kind": "transition",
+        "shortName": "山崖瞭望",
+        "content": "Northeast cliffside lookout. Pine trees clinging to rocky outcrops. A wooden lookout platform overlooks a misty valley. A footpath enters the WEST edge at y=512 (perpendicular crossing the west border) and exits the SOUTH edge at x=300 (perpendicular crossing the south border).",
+        "allowedFlora": "pine, mountain grass, moss",
+        "forbiddenElements": "cherry blossoms, rice paddies, market stalls",
+        "interactiveElements": [
+          { "name": "瞭望台", "description": "木质瞭望台，可眺望迷雾山谷" }
+        ]
+      },
+      {
+        "id": "C10",
+        "row": 1,
+        "col": 0,
+        "kind": "transition",
+        "shortName": "纳沃利市集",
+        "content": "Western district of Placidium of Navori: a partially rebuilt market with paper-lantern stalls (tea house, calligraphy shop, herb stand), shown as small cross-section buildings (no roofs, low walls, interior visible). A few stone walls being repaired. A cobblestone road exits the EAST edge at y=512 (perpendicular crossing the east border) toward the central plaza. A path enters from the NORTH edge at x=512.",
+        "allowedFlora": "bamboo, willow, mountain grass",
+        "forbiddenElements": "cherry blossoms, rice paddies",
+        "interactiveElements": [
+          { "name": "茶肆", "description": "可坐下喝茶的临时茶摊" },
+          { "name": "字画铺", "description": "卷轴成捆的字画修复铺" }
+        ]
+      },
+      {
+        "id": "C11",
+        "row": 1,
+        "col": 1,
+        "kind": "landmark",
+        "shortName": "纳沃利圣坛中心",
+        "content": "The CENTRAL plaza of the Placidium of Navori. A great open stone-paved square with a circular white marble altar at the EXACT CENTER (x=768, y=512) of the chunk. The plaza is ringed by four bamboo stands at the cardinal points. A multi-tier wooden temple (cross-section, no roof, low walls; interior shows wooden pews and a central altar) sits in the NORTH QUADRANT of the chunk — its center at approximately (x=768, y=300). IMPORTANT: keep the temple at least 100px from the top edge of the chunk; the road must pass NORTH of the temple to exit the chunk. Four roads form a cross: enter from north (at x=512 on top edge), south (at x=512 on bottom edge), east (at y=512 on east edge), west (at y=512 on west edge).",
+        "allowedFlora": "cherry blossom (pink, sparse), bamboo",
+        "forbiddenElements": "rice paddies, large secondary buildings, market stalls",
+        "interactiveElements": [
+          { "name": "祭坛", "description": "圆形白石祭坛，可祈愿" },
+          { "name": "主殿", "description": "纳沃利圣殿主殿，木质多重檐，可入" }
+        ]
+      },
+      {
+        "id": "C12",
+        "row": 1,
+        "col": 2,
+        "kind": "transition",
+        "shortName": "竹林书斋",
+        "content": "Eastern district adjacent to the Placidium: a quiet bamboo grove with a small one-room enterable wooden study (cross-section, low walls, interior shows scrolls and a writing desk). A footpath enters from the WEST edge at y=512 and exits the SOUTH edge at x=300. A small section of the river crosses through the chunk from the NORTH edge at x=900 to the SOUTH edge at x=1100.",
+        "allowedFlora": "bamboo, pine",
+        "forbiddenElements": "cherry blossoms, rice paddies, market stalls",
+        "interactiveElements": [
+          { "name": "书斋", "description": "竹林深处的木结构小书斋，可入" }
+        ]
+      },
+      {
+        "id": "C20",
+        "row": 2,
+        "col": 0,
+        "kind": "transition",
+        "shortName": "南水田",
+        "content": "Southwest rice paddies. Geometric flooded paddy patches with raised earth boundaries between them. A wooden waterwheel by the west stream. A dirt path runs east-west across the middle. A dirt road enters the chunk from the NORTH edge at x=512 (perpendicular).",
+        "allowedFlora": "rice plants, willow, reeds",
+        "forbiddenElements": "cherry blossoms, bamboo, mountain rocks",
+        "interactiveElements": [
+          { "name": "水车", "description": "古老的木质水车，仍在转动" }
+        ]
+      },
+      {
+        "id": "C21",
+        "row": 2,
+        "col": 1,
+        "kind": "transition",
+        "shortName": "稻田纪念碑",
+        "content": "Southern road exit out of Placidium. The central NORTH-SOUTH road runs through the chunk at x=512 (enters from north edge at x=512, exits south edge at x=512). Surrounding the road are ripe rice paddies. A small stone war memorial (a single weathered upright stone slab, NOT melting/abstract — clean rectangular profile) sits at the road's east side near (x=900, y=400), with white prayer flags attached.",
+        "allowedFlora": "rice plants, willow",
+        "forbiddenElements": "cherry blossoms, bamboo, mountain rocks",
+        "interactiveElements": [
+          { "name": "战痕碑", "description": "诺战阵亡者纪念碑，挂满白色祈福布条" }
+        ]
+      },
+      {
+        "id": "C22",
+        "row": 2,
+        "col": 2,
+        "kind": "transition",
+        "shortName": "山泉小屋",
+        "content": "Southeast rural homestead. A single thatch-roofed wooden farmhouse (this one is non-enterable scenery, full roof). The river enters from the NORTH edge at x=300 and exits the SOUTH edge at x=900 (flowing diagonally). A small fenced vegetable garden. A footpath enters from the WEST edge at y=512.",
+        "allowedFlora": "willow, reeds, vegetable plants",
+        "forbiddenElements": "cherry blossoms, bamboo, market stalls",
+        "interactiveElements": [
+          { "name": "菜园", "description": "栅栏围着的小型菜园" }
+        ]
+      }
+    ]
+  }
+}
