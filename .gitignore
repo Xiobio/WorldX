@@ -6,6 +6,8 @@ dist/
 .env
 output/worlds/*/
 !output/worlds/.gitkeep
+output/zones/
+.claude/
 .DS_Store
 *.log
 library/worlds/*/timelines/
