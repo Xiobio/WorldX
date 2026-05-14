@@ -12,19 +12,27 @@
       --dim: #5a5550;
     }
     html, body {
-      margin: 0; padding: 0; height: 100%;
+      margin: 0; padding: 0;
+      width: 100%; height: 100%;
+      /* Use dvh where supported so the mobile address bar showing/hiding
+         doesn't shrink the viewport mid-game. Falls back to vh otherwise. */
+      height: 100dvh;
       background: #000; color: var(--fg);
       font-family: "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
       overflow: hidden;
       user-select: none;
+      -webkit-user-select: none;
+      touch-action: none;
+      overscroll-behavior: none;
     }
     #stage {
       position: fixed; inset: 0;
+      width: 100%; height: 100%;
     }
     #game {
       display: block;
       background: #000;
-      width: 100vw; height: 100vh;
+      width: 100%; height: 100%;
       cursor: default;
     }
     #fade {
@@ -230,34 +238,6 @@
     }
     @keyframes introHint { to { opacity: 1; } }
     @keyframes hintPulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
-    #fs-prompt {
-      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      z-index: 30;
-      padding: 18px 36px;
-      background: rgba(20,18,16,0.92);
-      border: 1px solid rgba(217,179,128,0.55);
-      border-radius: 999px;
-      color: var(--accent);
-      font-size: 16px;
-      letter-spacing: 4px;
-      cursor: pointer;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 8px 60px rgba(0,0,0,0.6);
-      transition: all 220ms ease;
-      display: none;
-    }
-    #fs-prompt:hover {
-      background: rgba(217,179,128,0.20);
-      border-color: var(--accent);
-      color: var(--fg);
-    }
-    #fs-prompt.show { display: block; animation: pulse 2.4s ease-in-out infinite; }
-    /* Hide fs-prompt while intro is showing — intro itself prompts the user. */
-    body:not(.intro-done) #fs-prompt.show { display: none; }
-    @keyframes pulse {
-      0%, 100% { box-shadow: 0 8px 60px rgba(0,0,0,0.6), 0 0 0 0 rgba(217,179,128,0.0); }
-      50%      { box-shadow: 0 8px 60px rgba(0,0,0,0.6), 0 0 0 18px rgba(217,179,128,0.0); }
-    }
     /* ── Discovery progress counter ── */
     #progress {
       position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
@@ -479,23 +459,57 @@
       body.has-touch #orientation-warn { display: flex; }
     }
 
-    /* ── Small-screen / touch adaptations ── */
+    /* ── Tablet / small laptop (769px – 1199px) ── */
+    @media (min-width: 769px) and (max-width: 1199px) {
+      #hud { max-width: 300px; padding: 12px 18px 12px 16px; }
+      #hud h2 { font-size: 19px; letter-spacing: 3px; }
+      #minimap { width: 170px; height: 188px; }
+      #minimap-wrap { padding: 8px 9px 6px; }
+      .btn { padding: 7px 12px; font-size: 12px; letter-spacing: 1px; }
+      #progress { font-size: 11px; letter-spacing: 3px; }
+    }
+
+    /* ── Small-screen / touch adaptations (≤768px) ── */
     @media (max-width: 768px) {
       body.has-touch #help { display: none; }
+      #hud { top: 10px; left: 10px; padding: 10px 14px; max-width: 220px; }
+      #hud h2 { font-size: 16px; letter-spacing: 2px; }
+      #hud .desc { font-size: 11px; max-height: 48px; }
+      #minimap-wrap { top: 10px; right: 10px; padding: 6px 8px 5px; }
+      #minimap { width: 140px; height: 154px; }
+      #minimap-title { font-size: 9px; letter-spacing: 2px; }
+      #progress { font-size: 10px; letter-spacing: 2px; padding: 5px 16px; gap: 10px; top: 10px; }
+      #progress .num, #progress .icon { font-size: 12px; }
       #control-bar { gap: 4px; padding: 4px 8px; }
       .btn { padding: 6px 10px; font-size: 12px; letter-spacing: 0; }
       select.btn { max-width: 130px; }
-      #progress { font-size: 10px; letter-spacing: 2px; padding: 5px 16px; gap: 10px; }
-      #progress .num, #progress .icon { font-size: 12px; }
-      #minimap-wrap { padding: 6px 8px 5px; }
-      #minimap { width: 140px; height: 154px; }
-      #minimap-title { font-size: 9px; letter-spacing: 2px; }
-      #hud { padding: 10px 14px; max-width: 220px; }
-      #hud h2 { font-size: 16px; letter-spacing: 2px; }
       #chapter-card .title { font-size: 28px; letter-spacing: 10px; }
       #speech { font-size: 12px; max-width: 280px; padding: 10px 16px; }
       #intro .title { font-size: 36px; letter-spacing: 14px; }
       #intro .lore { font-size: 12px; max-width: 420px; padding: 0 24px; }
+    }
+
+    /* ── Tiny phones (≤480px) ── */
+    @media (max-width: 480px) {
+      #hud { max-width: 180px; padding: 8px 10px; }
+      #hud h2 { font-size: 14px; letter-spacing: 1px; }
+      #hud .desc { font-size: 10px; max-height: 32px; line-height: 1.4; }
+      #minimap { width: 110px; height: 122px; }
+      #minimap-legend { display: none; }
+      #progress { font-size: 9px; padding: 4px 12px; gap: 8px; }
+      #progress .num, #progress .icon { font-size: 11px; }
+      #control-bar { font-size: 10px; }
+      .btn { padding: 5px 8px; font-size: 10px; }
+      #intro .title { font-size: 28px; letter-spacing: 8px; }
+      #intro .lore { font-size: 11px; padding: 0 16px; }
+    }
+
+    /* ── Ultrawide / 1440p+ — keep HUD readable without ballooning it ── */
+    @media (min-width: 1920px) {
+      #hud { max-width: 420px; padding: 16px 26px 16px 20px; }
+      #hud h2 { font-size: 26px; letter-spacing: 5px; }
+      #minimap { width: 220px; height: 242px; }
+      #progress { font-size: 13px; padding: 10px 28px; }
     }
 
     /* ── Cinematic transition: letterbox bars + chapter card ── */
@@ -771,7 +785,7 @@
       </div>
     </div>
     <div id="help" class="ui-overlay">
-      <kbd>WASD</kbd> 移动 · <kbd>SHIFT</kbd> 跑 · <kbd>F</kbd> 风之疾驰 · <kbd>E</kbd> 探查 · <kbd>[</kbd>/<kbd>]</kbd> 切场景 · <kbd>G</kbd> 引导 · <kbd>M</kbd> 静音 · <kbd>T</kbd> 设置 · <kbd>Shift+F</kbd> 全屏
+      <kbd>WASD</kbd> 移动 · <kbd>SHIFT</kbd> 跑 · <kbd>F</kbd> 风之疾驰 · <kbd>E</kbd> 探查 · <kbd>[</kbd>/<kbd>]</kbd> 切场景 · <kbd>G</kbd> 引导 · <kbd>M</kbd> 静音 · <kbd>T</kbd> 设置 · <kbd>F11</kbd> 全屏
     </div>
     <div id="progress" class="ui-overlay">
       <span class="seg">
@@ -803,7 +817,6 @@
       </div>
     </div>
     <div id="toast"></div>
-    <div id="fs-prompt">点击进入全屏</div>
     <div id="poi-modal">
       <div class="card">
         <div class="kind" id="poi-kind">秘境</div>
@@ -2018,11 +2031,17 @@
   }
 
   function fitCanvasToWindow() {
+    // Prefer visualViewport (handles mobile address bar showing/hiding correctly)
+    // and fall back to innerWidth/innerHeight on browsers that don't expose it.
+    const vv = window.visualViewport;
+    const w = Math.max(1, Math.round(vv ? vv.width : window.innerWidth));
+    const h = Math.max(1, Math.round(vv ? vv.height : window.innerHeight));
+    // Cap DPR at 2 to keep memory sane on retina / 4K screens.
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = Math.round(window.innerWidth * dpr);
-    canvas.height = Math.round(window.innerHeight * dpr);
-    canvas.style.width = window.innerWidth + "px";
-    canvas.style.height = window.innerHeight + "px";
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
+    canvas.style.width = w + "px";
+    canvas.style.height = h + "px";
     recomputeFit();
   }
 
@@ -2846,9 +2865,8 @@
     if (!modalOpen && e.key === "[") { runTransition(prevChunkId()); }
     if (!modalOpen && e.key === "]") { runTransition(nextChunkId()); }
     if (e.key.toLowerCase() === "f") {
-      // F = wind dash (Yasuo's signature). Hold Shift while pressing F to enter fullscreen instead.
-      if (e.shiftKey) toggleFullscreen();
-      else { e.preventDefault(); tryWindDash(); }
+      e.preventDefault();
+      tryWindDash();
     }
     if (e.key.toLowerCase() === "g") {
       walkableOverlayOn = !walkableOverlayOn;
@@ -2876,6 +2894,10 @@
   window.addEventListener("keyup", (e) => keys.delete(e.key.toLowerCase()));
   window.addEventListener("blur", () => keys.clear());
   window.addEventListener("resize", fitCanvasToWindow);
+  window.addEventListener("orientationchange", fitCanvasToWindow);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", fitCanvasToWindow);
+  }
 
   // ── Settings panel ──
   let volumeLevel = 0.80;          // 0..1
@@ -3309,33 +3331,11 @@
     }
   }
 
-  function toggleFullscreen() {
-    if (!document.fullscreenElement) enterFullscreen();
-    else document.exitFullscreen?.();
-  }
-
-  function enterFullscreen() {
-    const el = document.documentElement;
-    const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
-    if (req) req.call(el).catch(() => {});
-  }
-
-  // ── Persistent fullscreen ──
-  // Browsers REQUIRE a user gesture to enter fullscreen — we can't auto-trigger.
-  // Strategy:
-  //   1) On any first interaction (mousedown/keydown), if not fullscreen, request it.
-  //   2) Show a centered prompt whenever we're not fullscreen, hide when we are.
-  //   3) Re-show prompt the moment user exits (e.g. Esc), so they can re-enter.
-  const fsPrompt = document.getElementById("fs-prompt");
-  function refreshFsPrompt() {
-    if (document.fullscreenElement) fsPrompt.classList.remove("show");
-    else fsPrompt.classList.add("show");
-  }
-  // First interaction listener — runs once, then is replaced by the regular game listeners.
-  function tryAutoFullscreenOnFirstGesture() {
+  // First-gesture handler — browsers require a user gesture to start audio.
+  // Canvas already fills the browser window via CSS (100dvh / 100%), so users
+  // who want true OS-fullscreen can just press F11 themselves.
+  function initOnFirstGesture() {
     const handler = () => {
-      if (!document.fullscreenElement) enterFullscreen();
-      // Same first-gesture initializes audio (browsers require user gesture).
       ensureAudio();
       if (currentChunk && !currentAmbient) {
         const p = pickAmbientPreset(currentChunk);
@@ -3345,9 +3345,11 @@
       dismissIntro();
       window.removeEventListener("mousedown", handler);
       window.removeEventListener("keydown", handler);
+      window.removeEventListener("touchstart", handler);
     };
     window.addEventListener("mousedown", handler, { capture: true });
     window.addEventListener("keydown", handler, { capture: true });
+    window.addEventListener("touchstart", handler, { capture: true });
   }
 
   function dismissIntro() {
@@ -3372,12 +3374,8 @@
       });
     }
   }
-  fsPrompt.addEventListener("click", enterFullscreen);
   document.getElementById("poi-modal").addEventListener("click", closePoiModal);
-  document.addEventListener("fullscreenchange", refreshFsPrompt);
-  document.addEventListener("webkitfullscreenchange", refreshFsPrompt);
-  refreshFsPrompt();
-  tryAutoFullscreenOnFirstGesture();
+  initOnFirstGesture();
 
   // ---------- Loop ----------
   function tick(now) {
